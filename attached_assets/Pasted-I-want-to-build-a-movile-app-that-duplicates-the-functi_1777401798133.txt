@@ -1,0 +1,174 @@
+I want to build a movile app that duplicates the functionality of this page: https://drgily.com/top-foods-by-nutrient-new.php
+The idea is that I have hosted on my webiste, in a MYSQL database, the FDA food database with all the nutrient information. On the front end, the user can select a nutrient from the dropdown, as you see at the link I gave you. Then they can choose a specific food group or multple food groups, or ALL Plants, or ALL Animal foods, as options to filter the results. Finally, on pressing the search button (which in the app can be made optional, i.e. results could be updated on any step two selection made after a short time the selection is made), the results are displayed in sets of 10 per page, on multiple navigable pages, in descending order based on the amount of nutrient contained.
+There is also a middle column called Serving Size, where the default value is 100gm, but user can chose a different serving size, from a dropdown, using data regarding serving sizes from my database. when they do that, the amount of nutrient displayed should be jupdated accordingly.
+I want the app to look professional, pleasant, easy to navigate and intuitive, with a slight touch of modernity and warmth.
+I want everything to run off my database and local website, do not pull data from other online or AI sources.   
+Add more details to the nutrient display to show the recommended daily value. Create a file for these values that I can host on my site so that I don't have to use AI or external resources for it. Also, create another file with the top 3 roles of each nutrient in the dropdown in our body, and display that info for each ntrient, when selected, in a dynamic, pleasant info box. Adjsut the color scheme to a greenish paletter. Also, would the emails for unlocking be hosted in my database? Keep everything else the same. 
+See below the code for the script that does the behind the scenes work on my site.
+<?php
+
+if(!isset($_POST['data'])) exit;
+
+parse_str($_POST['data'],$s);
+
+$page=max(1,(int)($s['page']??1));
+$groups=$s['food_group']??[];
+$nutr=$s['nutrient_list'];
+
+if(!$groups||!$nutr) exit;
+
+$db=new PDO(
+'mysql:host=localhost;dbname=drgilyco_foods;charset=utf8',
+'drgilyco_gily05',
+'lacra77MDB',
+[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]
+);
+
+$limit=10;
+$offset=($page-1)*$limit;
+
+$in=str_repeat('?,',count($groups)-1).'?';
+
+/* nutrient */
+$n=$db->prepare(
+"SELECT NutrDesc,Units FROM NUTR_DEF WHERE Nutr_No=?");
+$n->execute([$nutr]);
+$nut=$n->fetch(PDO::FETCH_ASSOC);
+
+/* TOTAL COUNT (pagination restored) */
+$c=$db->prepare("
+SELECT COUNT(*)
+FROM FOOD_DES f
+JOIN NUT_DATA d ON f.NDB_No=d.NDB_No
+WHERE d.Nutr_No=?
+AND f.FdGrp_Cd IN ($in)
+");
+
+$c->execute(array_merge([$nutr],$groups));
+$total=$c->fetchColumn();
+
+$total_pages=max(1,ceil($total/$limit));
+$page=min($page,$total_pages);
+
+/* PAGE QUERY */
+$q=$db->prepare("
+SELECT
+f.NDB_No,
+f.Long_Desc,
+f.FdGrp_Cd,
+d.Nutr_Val
+FROM FOOD_DES f
+JOIN NUT_DATA d ON f.NDB_No=d.NDB_No
+WHERE d.Nutr_No=?
+AND f.FdGrp_Cd IN ($in)
+ORDER BY d.Nutr_Val DESC
+LIMIT $offset,$limit
+");
+
+$q->execute(array_merge([$nutr],$groups));
+$foods=$q->fetchAll(PDO::FETCH_ASSOC);
+
+/* WEIGHT CACHE */
+$ids=array_column($foods,'NDB_No');
+$weights=[];
+
+if($ids){
+$in2=str_repeat('?,',count($ids)-1).'?';
+
+$w=$db->prepare("
+SELECT NDB_No,Amount,Msre_Desc,Gm_Wgt
+FROM WEIGHT
+WHERE NDB_No IN ($in2)
+ORDER BY Seq");
+
+$w->execute($ids);
+
+while($r=$w->fetch(PDO::FETCH_ASSOC))
+$weights[$r['NDB_No']][]=$r;
+}
+
+/* TABLE */
+
+echo "<table class='u-full-width'>
+<thead>
+<tr>
+<th>#</th>
+<th>Food</th>
+<th>Serving Size</th>
+<th>{$nut['NutrDesc']}</th>
+</tr>
+</thead><tbody>";
+
+$rank=$offset+1;
+
+foreach($foods as $f){
+
+$id=$f['NDB_No'];
+$base=(float)$f['Nutr_Val'];
+
+$defaultGrams=100;
+$options="<option data-grams='100'>100.0 g</option>";
+
+if(isset($weights[$id])){
+foreach($weights[$id] as $s){
+
+$amt=number_format($s['Amount'],1);
+$desc=$s['Msre_Desc'];
+$g=$s['Gm_Wgt'];
+
+if($f['FdGrp_Cd']=='1200'
+&& stripos($desc,'oz')!==false){
+$defaultGrams=$g;
+}
+
+$options.="<option data-grams='$g'>
+$amt $desc
+</option>";
+}
+}
+
+$value=($base/100)*$defaultGrams;
+
+echo "<tr data-val='$value'>";
+
+echo "<td>$rank</td>";
+
+echo "<td>
+<a target='_blank'
+href='nutrient-analysis.php?NDB_No=$id'>
+{$f['Long_Desc']}
+</a></td>";
+
+echo "<td>
+<select class='servingSelect'
+data-base='$base'>
+$options
+</select></td>";
+
+echo "<td>
+<span class='servVal'>".
+number_format($value,1).
+"</span> {$nut['Units']}
+</td>";
+
+echo "</tr>";
+
+$rank++;
+}
+
+echo "</tbody></table>";
+
+/* PAGINATION */
+
+echo "<div class='pagination' style='text-align:center;margin-top:15px;'>";
+
+if($page>1)
+echo "<a href='#' data-page='".($page-1)."'>&lt; Previous</a> ";
+
+echo "<strong> Page $page of $total_pages </strong>";
+
+if($page<$total_pages)
+echo " <a href='#' data-page='".($page+1)."'>Next &gt;</a>";
+
+echo "</div>";
+?>
