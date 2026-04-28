@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "NutrientFinder"
+version = "1.0.0"
+id = "artifacts/nutrient-finder"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 22775
+
+[services.development]
+run = "pnpm --filter @workspace/nutrient-finder run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nutrient-finder", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/nutrient-finder", "run", "serve" ]
+
+[services.env]
+PORT = "22775"
+BASE_PATH = "/"

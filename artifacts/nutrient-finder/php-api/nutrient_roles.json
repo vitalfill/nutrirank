@@ -1,0 +1,302 @@
+{
+  "_note": "Top 3 physiological roles for each nutrient. Intended for display in the NutrientFinder mobile app info box.",
+  "_last_updated": "2024",
+  "nutrients": {
+    "203": {
+      "name": "Protein",
+      "roles": [
+        "Builds and repairs muscle, skin, organs, and connective tissue",
+        "Forms enzymes that catalyze virtually every biochemical reaction in the body",
+        "Antibodies (immune proteins) defend the body against pathogens and infections"
+      ]
+    },
+    "204": {
+      "name": "Total Fat",
+      "roles": [
+        "The brain is ~60% fat; essential fatty acids are critical for cognition and mood",
+        "Steroid hormones (estrogen, testosterone, cortisol) are synthesized from dietary fats",
+        "Fat-soluble vitamins A, D, E, and K require dietary fat for intestinal absorption"
+      ]
+    },
+    "205": {
+      "name": "Carbohydrate",
+      "roles": [
+        "Primary energy source; glucose from carbs is the body's most efficient fuel",
+        "The brain exclusively uses glucose for fuel under normal conditions",
+        "Complex carbs provide dietary fiber that feeds gut bacteria and supports bowel regularity"
+      ]
+    },
+    "208": {
+      "name": "Energy (Calories)",
+      "roles": [
+        "Fuels all cellular processes from heartbeat to brain activity",
+        "Supports basal metabolic rate — the energy needed just to sustain life at rest",
+        "Powers physical performance, endurance, and post-exercise recovery"
+      ]
+    },
+    "269": {
+      "name": "Total Sugars",
+      "roles": [
+        "Rapidly converted to glucose, providing fast energy for muscles and brain",
+        "Glucose from sugars is the brain's preferred and exclusive fuel source",
+        "Natural sugars in fruit and dairy accompany fiber, vitamins, and minerals"
+      ]
+    },
+    "291": {
+      "name": "Dietary Fiber",
+      "roles": [
+        "Feeds beneficial gut bacteria (prebiotics), promoting a healthy microbiome",
+        "Slows glucose absorption, preventing blood sugar spikes after meals",
+        "Soluble fiber binds bile cholesterol in the gut, reducing LDL (bad) cholesterol"
+      ]
+    },
+    "301": {
+      "name": "Calcium",
+      "roles": [
+        "99% stored in bones and teeth, providing structural hardness and strength",
+        "Triggers muscle fiber contraction — required for every movement including heartbeats",
+        "Regulates neurotransmitter release at nerve synapses, enabling nervous system signaling"
+      ]
+    },
+    "303": {
+      "name": "Iron",
+      "roles": [
+        "Core of hemoglobin in red blood cells; carries oxygen from lungs to every tissue",
+        "Required by mitochondria to produce ATP, the universal cellular energy molecule",
+        "Supports immune cell proliferation and maturation to fight infections"
+      ]
+    },
+    "304": {
+      "name": "Magnesium",
+      "roles": [
+        "Cofactor for 300+ enzymes involved in protein synthesis, DNA replication, and energy production",
+        "Regulates electrical activity in nerves and muscles, including the heart",
+        "Improves insulin sensitivity and helps regulate blood glucose metabolism"
+      ]
+    },
+    "305": {
+      "name": "Phosphorus",
+      "roles": [
+        "Combines with calcium to form hydroxyapatite — the mineral matrix of bones and teeth",
+        "Component of ATP (adenosine triphosphate) — the universal energy currency of all cells",
+        "A key structural component of phospholipid cell membranes throughout the body"
+      ]
+    },
+    "306": {
+      "name": "Potassium",
+      "roles": [
+        "Counteracts sodium's effect, relaxing blood vessels and lowering blood pressure",
+        "Works with sodium to regulate muscle contractions, including the heart muscle",
+        "The primary intracellular cation, maintaining proper fluid balance inside cells"
+      ]
+    },
+    "307": {
+      "name": "Sodium",
+      "roles": [
+        "Regulates fluid distribution between blood and cells, maintaining blood pressure and volume",
+        "Sodium ions flowing into nerve cells generate the electrical signals for nerve transmission",
+        "Required for muscle contraction; works in opposition to potassium in muscle cells"
+      ]
+    },
+    "309": {
+      "name": "Zinc",
+      "roles": [
+        "Activates T-cells and other immune cells that defend against bacteria and viruses",
+        "Stimulates skin cell growth and collagen production for wound closure and repair",
+        "Cofactor for hundreds of enzymes involved in protein synthesis and DNA production"
+      ]
+    },
+    "312": {
+      "name": "Copper",
+      "roles": [
+        "Ceruloplasmin (a copper protein) is essential for mobilizing iron from storage to blood",
+        "Component of superoxide dismutase — one of the body's primary antioxidant enzymes",
+        "Required for cross-linking collagen and elastin, giving connective tissue strength"
+      ]
+    },
+    "315": {
+      "name": "Manganese",
+      "roles": [
+        "Activates enzymes critical for bone matrix protein synthesis and bone mineralization",
+        "Cofactor for enzymes that metabolize carbohydrates, amino acids, and cholesterol",
+        "Component of manganese superoxide dismutase — the main mitochondrial antioxidant enzyme"
+      ]
+    },
+    "317": {
+      "name": "Selenium",
+      "roles": [
+        "Essential for glutathione peroxidase — a powerful enzyme that neutralizes hydrogen peroxide",
+        "Required for converting inactive thyroid hormone T4 to the active form T3",
+        "Supports proliferation and function of T-cells and natural killer immune cells"
+      ]
+    },
+    "318": {
+      "name": "Vitamin A (IU)",
+      "roles": [
+        "Retinal (a form of vitamin A) is the light-sensing molecule in the eye's rod cells",
+        "Maintains epithelial integrity throughout the body — a first-line barrier against pathogens",
+        "Regulates differentiation and reproduction of skin, gut, lung, and other epithelial cells"
+      ]
+    },
+    "320": {
+      "name": "Vitamin A (RAE)",
+      "roles": [
+        "Retinal (derived from vitamin A RAE) is the chromophore in rhodopsin for night vision",
+        "Supports innate immunity by maintaining mucous membrane barriers throughout the body",
+        "Regulates gene expression for cell growth, differentiation, and programmed cell death"
+      ]
+    },
+    "323": {
+      "name": "Vitamin E",
+      "roles": [
+        "Breaks free radical chain reactions in cell membranes, protecting polyunsaturated fats from oxidation",
+        "Enhances immune cell production and helps regulate inflammatory and anti-tumor responses",
+        "Protects skin cells from UV-induced and environmental oxidative damage"
+      ]
+    },
+    "324": {
+      "name": "Vitamin D",
+      "roles": [
+        "Activates calcium-binding proteins in the gut that absorb calcium from food",
+        "Regulates calcium and phosphorus deposition in bone, maintaining bone density",
+        "Vitamin D receptors on immune cells modulate inflammatory and pathogen-defense responses"
+      ]
+    },
+    "328": {
+      "name": "Vitamin D (D2+D3)",
+      "roles": [
+        "Activates intestinal calcium-binding proteins to optimize calcium absorption",
+        "Stimulates osteoblasts and modulates osteoclasts to maintain bone mineral density",
+        "Regulates over 200 genes involved in immune function, cell growth, and inflammation"
+      ]
+    },
+    "401": {
+      "name": "Vitamin C",
+      "roles": [
+        "Donates electrons to neutralize free radicals, protecting DNA, proteins, and lipids",
+        "Essential cofactor for prolyl hydroxylase — the enzyme that stabilizes collagen structure",
+        "Stimulates production and chemotaxis of neutrophils, lymphocytes, and phagocytes"
+      ]
+    },
+    "404": {
+      "name": "Thiamin (B1)",
+      "roles": [
+        "As thiamine pyrophosphate, drives the conversion of pyruvate to acetyl-CoA for energy",
+        "Required for myelin sheath production and electrical signal transmission in nerve axons",
+        "A key coenzyme in the pentose phosphate pathway that produces nucleotides and NADPH"
+      ]
+    },
+    "405": {
+      "name": "Riboflavin (B2)",
+      "roles": [
+        "Component of FAD and FMN coenzymes that accept electrons in the mitochondrial energy chain",
+        "Required for cellular growth, function, and reproduction throughout the body",
+        "Regenerates glutathione from its oxidized form, maintaining intracellular antioxidant defenses"
+      ]
+    },
+    "406": {
+      "name": "Niacin (B3)",
+      "roles": [
+        "Precursor to NAD+ — the most critical electron carrier in mitochondrial ATP production",
+        "NAD+ is an essential cofactor for DNA repair enzymes (PARPs) that maintain genome integrity",
+        "Supports healthy skin barrier function; deficiency causes the dermatitis of pellagra"
+      ]
+    },
+    "410": {
+      "name": "Pantothenic Acid (B5)",
+      "roles": [
+        "Component of Coenzyme A (CoA), the central hub of carbohydrate, fat, and protein catabolism",
+        "Required for synthesis of steroid hormones, vitamin D, and the neurotransmitter acetylcholine",
+        "Supports fatty acid synthesis for new cell membranes during wound healing and growth"
+      ]
+    },
+    "415": {
+      "name": "Vitamin B6",
+      "roles": [
+        "Cofactor for 100+ enzymes involved in building and breaking down amino acids",
+        "Required to produce serotonin, dopamine, GABA, and norepinephrine from amino acid precursors",
+        "Helps produce antibodies and maintains lymphocyte function for adaptive immunity"
+      ]
+    },
+    "417": {
+      "name": "Folate",
+      "roles": [
+        "Provides one-carbon units for synthesizing thymidylate — a building block of DNA",
+        "Critical during rapid cell division (pregnancy, infancy) for proper tissue formation",
+        "Adequate intake in early pregnancy prevents neural tube defects in developing embryos"
+      ]
+    },
+    "418": {
+      "name": "Vitamin B12",
+      "roles": [
+        "Required for normal red blood cell maturation; deficiency causes megaloblastic anemia",
+        "Maintains the myelin sheath surrounding nerve axons for proper electrical conduction",
+        "Works with folate in one-carbon metabolism to produce thymidylate for DNA synthesis"
+      ]
+    },
+    "421": {
+      "name": "Choline",
+      "roles": [
+        "Precursor to acetylcholine — the neurotransmitter governing memory, learning, and muscle control",
+        "Required to export triglycerides as VLDL particles; prevents fatty liver accumulation",
+        "Phosphatidylcholine (from choline) is the dominant phospholipid in every cell membrane"
+      ]
+    },
+    "430": {
+      "name": "Vitamin K",
+      "roles": [
+        "Essential cofactor for gamma-carboxylation of clotting factors II, VII, IX, X in the liver",
+        "Activates osteocalcin — the protein that anchors calcium ions into the bone mineral matrix",
+        "Activates Matrix Gla Protein (MGP) which prevents calcification of arterial walls"
+      ]
+    },
+    "435": {
+      "name": "Folate DFE",
+      "roles": [
+        "Provides one-carbon units essential for de novo synthesis of purines and thymidylate",
+        "Critical during rapid cell division for DNA integrity and proper gene expression",
+        "Adequate periconceptional intake prevents up to 70% of neural tube defect cases"
+      ]
+    },
+    "601": {
+      "name": "Cholesterol",
+      "roles": [
+        "Structural precursor for all steroid hormones: cortisol, estrogen, testosterone, and aldosterone",
+        "In the skin, cholesterol is converted to vitamin D3 upon UV-B light exposure",
+        "Modulates cell membrane fluidity and organizes lipid rafts that coordinate cell signaling"
+      ]
+    },
+    "606": {
+      "name": "Saturated Fat",
+      "roles": [
+        "A dense, stable energy source stored in adipose tissue and released between meals",
+        "Palmitic and stearic acids are precursors to longer-chain fats used in hormone synthesis",
+        "Provides structural rigidity to cell membranes, influencing receptor and ion channel function"
+      ]
+    },
+    "645": {
+      "name": "Monounsaturated Fat",
+      "roles": [
+        "Replacing saturated fat with monounsaturated fat (oleic acid) lowers LDL without reducing HDL",
+        "Improves insulin sensitivity and helps stabilize post-meal blood glucose responses",
+        "Oleic acid reduces inflammatory markers including C-reactive protein and interleukin-6"
+      ]
+    },
+    "646": {
+      "name": "Polyunsaturated Fat",
+      "roles": [
+        "DHA (omega-3 PUFA) comprises ~25% of brain fat and is critical for cognition and memory",
+        "Omega-3 fatty acids produce resolvins and protectins that actively resolve inflammation",
+        "Omega-3s lower triglycerides and reduce cardiac arrhythmia risk by modulating ion channels"
+      ]
+    },
+    "221": {
+      "name": "Alcohol (Ethanol)",
+      "roles": [
+        "Provides 7 kcal/gram; metabolized preferentially before fat, carbohydrates, or protein",
+        "At low doses causes vasodilation (widening of blood vessels) and a temporary drop in blood pressure",
+        "Inhibits glutamate receptors and potentiates GABA receptors, producing central nervous system sedation"
+      ]
+    }
+  }
+}
