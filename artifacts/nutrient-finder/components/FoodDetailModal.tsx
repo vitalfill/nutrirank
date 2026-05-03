@@ -110,14 +110,25 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
   const [expandFatty, setExpandFatty] = useState(false);
   const [expandAmino, setExpandAmino] = useState(false);
 
-  const { data, isLoading, isError } = useQuery<FoodDetailData>({
-    queryKey: ["food-detail", ndbNo],
+  const [retryCount, setRetryCount] = useState(0);
+
+  const { data, isLoading, isError, error } = useQuery<FoodDetailData, Error>({
+    queryKey: ["food-detail", ndbNo, retryCount],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/food-detail.php?ndb_no=${ndbNo}`);
-      return res.json();
+      const text = await res.text();
+      let json: any;
+      try { json = JSON.parse(text); } catch {
+        throw new Error(`Server returned non-JSON (HTTP ${res.status}). Make sure food-detail.php is uploaded to drgily.com/app-api/.`);
+      }
+      if (!res.ok || json.error) {
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      }
+      return json;
     },
     enabled: !!ndbNo,
     staleTime: 1000 * 60 * 30,
+    retry: 1,
   });
 
   const proximates = data?.nutrients.filter(n => n.SR_Order < PROXIMATES_MAX) ?? [];
@@ -164,6 +175,16 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
           <View style={styles.center}>
             <MaterialIcons name="error-outline" size={44} color={colors.destructive} />
             <Text style={styles.errorText}>Could not load nutrition data.</Text>
+            {error?.message && (
+              <Text style={styles.errorDetail}>{error.message}</Text>
+            )}
+            <Pressable
+              style={({ pressed }) => [styles.retryBtn, pressed && { opacity: 0.75 }]}
+              onPress={() => setRetryCount(c => c + 1)}
+            >
+              <MaterialIcons name="refresh" size={16} color="#fff" />
+              <Text style={styles.retryText}>Try Again</Text>
+            </Pressable>
           </View>
         )}
 
@@ -292,7 +313,17 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingTop: 80,
     },
     loadingText: { fontSize: 14, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
-    errorText: { fontSize: 15, color: colors.destructive, fontFamily: "Inter_600SemiBold" },
+    errorText: { fontSize: 15, color: colors.destructive, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+    errorDetail: {
+      fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular",
+      textAlign: "center", paddingHorizontal: 24, lineHeight: 18,
+    },
+    retryBtn: {
+      flexDirection: "row", alignItems: "center", gap: 6,
+      backgroundColor: colors.primary, borderRadius: 10,
+      paddingHorizontal: 20, paddingVertical: 10, marginTop: 8,
+    },
+    retryText: { fontSize: 14, color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
     footNote: {
       fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular",
       paddingHorizontal: 16, paddingTop: 10, lineHeight: 17,
