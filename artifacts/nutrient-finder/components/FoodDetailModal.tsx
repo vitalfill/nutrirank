@@ -68,6 +68,9 @@ const VITAMINS_MAX   = 9000;
 const LIPIDS_MAX     = 16000;
 const AMINO_MAX      = 18000;
 
+// Fat sub-types shown indented under Total Fat in the Macronutrients section
+const FAT_SUB_NOS = new Set(["606", "645", "646", "605"]);
+
 // Explicit mineral Nutr_No codes — ensures Cu, Mn, Se etc. are never misclassified
 // as vitamins when their SR_Order falls in the vitamins range on this database.
 const MINERAL_NOS = new Set([
@@ -225,13 +228,19 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
 
   const isAmino   = (n: NutrientRow) => AMINO_ACID_NOS.has(n.Nutr_No) || (n.SR_Order >= LIPIDS_MAX && n.SR_Order < AMINO_MAX);
   const isMineral = (n: NutrientRow) => MINERAL_NOS.has(n.Nutr_No) || (n.SR_Order >= PROXIMATES_MAX && n.SR_Order < MINERALS_MAX);
+  const isFatSub  = (n: NutrientRow) => FAT_SUB_NOS.has(n.Nutr_No);
 
-  const proximates = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order < PROXIMATES_MAX) ?? [];
+  // Fat sub-items ordered: Saturated → Trans → Monounsaturated → Polyunsaturated
+  const FAT_SUB_ORDER = ["606", "605", "645", "646"];
+  const fatSubRows = (data?.nutrients.filter(isFatSub) ?? [])
+    .sort((a, b) => FAT_SUB_ORDER.indexOf(a.Nutr_No) - FAT_SUB_ORDER.indexOf(b.Nutr_No));
+
+  const proximates = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && !isFatSub(n) && n.SR_Order < PROXIMATES_MAX) ?? [];
   const minerals   = data?.nutrients.filter(n => !isAmino(n) && isMineral(n)) ?? [];
-  const vitamins   = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order >= MINERALS_MAX && n.SR_Order < VITAMINS_MAX) ?? [];
-  const fatty      = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order >= VITAMINS_MAX && n.SR_Order < LIPIDS_MAX) ?? [];
+  const vitamins   = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && !isFatSub(n) && n.SR_Order >= MINERALS_MAX && n.SR_Order < VITAMINS_MAX) ?? [];
+  const fatty      = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && !isFatSub(n) && n.SR_Order >= VITAMINS_MAX && n.SR_Order < LIPIDS_MAX) ?? [];
   const amino      = data?.nutrients.filter(n => isAmino(n)) ?? [];
-  const other      = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order >= AMINO_MAX) ?? [];
+  const other      = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && !isFatSub(n) && n.SR_Order >= AMINO_MAX) ?? [];
 
   const energy    = proximates.find(n => n.Nutr_No === "208" || n.NutrDesc.toLowerCase().startsWith("energy"));
   const mainRows  = proximates.filter(n => n !== energy);
@@ -338,10 +347,13 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
               <>
                 <SectionHeader title="Macronutrients" colors={colors} />
                 {mainRows.map(n => (
-                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors}
-                    indent={["606","645","646","605"].includes(n.Nutr_No)}
-                    grams={selectedGrams}
-                  />
+                  <React.Fragment key={n.Nutr_No}>
+                    <NutrientLine nutr={n} colors={colors} grams={selectedGrams} />
+                    {/* Inject fat breakdown indented directly under Total Fat */}
+                    {n.Nutr_No === "204" && fatSubRows.map(sub => (
+                      <NutrientLine key={sub.Nutr_No} nutr={sub} colors={colors} grams={selectedGrams} indent />
+                    ))}
+                  </React.Fragment>
                 ))}
               </>
             )}
