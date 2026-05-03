@@ -68,6 +68,12 @@ const VITAMINS_MAX   = 9000;
 const LIPIDS_MAX     = 16000;
 const AMINO_MAX      = 18000;
 
+// Explicit mineral Nutr_No codes — ensures Cu, Mn, Se etc. are never misclassified
+// as vitamins when their SR_Order falls in the vitamins range on this database.
+const MINERAL_NOS = new Set([
+  "301","303","304","305","306","307","309","312","313","315","317",
+]);
+
 // Explicit set of USDA amino acid Nutr_No codes — used as a fallback so nutrients
 // like Serine (518, SR_Order ~18100) are always bucketed correctly.
 const AMINO_ACID_NOS = new Set([
@@ -217,13 +223,15 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
   const selectedOption = servingOptions.find(o => o.grams === selectedGrams)
     ?? { label: `${selectedGrams} g`, grams: selectedGrams };
 
-  const proximates = data?.nutrients.filter(n => n.SR_Order < PROXIMATES_MAX && !AMINO_ACID_NOS.has(n.Nutr_No)) ?? [];
-  const minerals   = data?.nutrients.filter(n => n.SR_Order >= PROXIMATES_MAX && n.SR_Order < MINERALS_MAX && !AMINO_ACID_NOS.has(n.Nutr_No)) ?? [];
-  const vitamins   = data?.nutrients.filter(n => n.SR_Order >= MINERALS_MAX  && n.SR_Order < VITAMINS_MAX  && !AMINO_ACID_NOS.has(n.Nutr_No)) ?? [];
-  const fatty      = data?.nutrients.filter(n => n.SR_Order >= VITAMINS_MAX  && n.SR_Order < LIPIDS_MAX    && !AMINO_ACID_NOS.has(n.Nutr_No)) ?? [];
-  // Amino acids: by SR_Order range OR by explicit Nutr_No set (catches Serine etc.)
-  const amino      = data?.nutrients.filter(n => AMINO_ACID_NOS.has(n.Nutr_No) || (n.SR_Order >= LIPIDS_MAX && n.SR_Order < AMINO_MAX)) ?? [];
-  const other      = data?.nutrients.filter(n => n.SR_Order >= AMINO_MAX && !AMINO_ACID_NOS.has(n.Nutr_No)) ?? [];
+  const isAmino   = (n: NutrientRow) => AMINO_ACID_NOS.has(n.Nutr_No) || (n.SR_Order >= LIPIDS_MAX && n.SR_Order < AMINO_MAX);
+  const isMineral = (n: NutrientRow) => MINERAL_NOS.has(n.Nutr_No) || (n.SR_Order >= PROXIMATES_MAX && n.SR_Order < MINERALS_MAX);
+
+  const proximates = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order < PROXIMATES_MAX) ?? [];
+  const minerals   = data?.nutrients.filter(n => !isAmino(n) && isMineral(n)) ?? [];
+  const vitamins   = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order >= MINERALS_MAX && n.SR_Order < VITAMINS_MAX) ?? [];
+  const fatty      = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order >= VITAMINS_MAX && n.SR_Order < LIPIDS_MAX) ?? [];
+  const amino      = data?.nutrients.filter(n => isAmino(n)) ?? [];
+  const other      = data?.nutrients.filter(n => !isAmino(n) && !isMineral(n) && n.SR_Order >= AMINO_MAX) ?? [];
 
   const energy    = proximates.find(n => n.Nutr_No === "208" || n.NutrDesc.toLowerCase().startsWith("energy"));
   const mainRows  = proximates.filter(n => n !== energy);
