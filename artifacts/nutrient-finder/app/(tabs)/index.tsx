@@ -99,7 +99,10 @@ export default function HomeScreen() {
     queryFn: async () => {
       const res  = await fetch(`${API_BASE}/nutrients.php`);
       const data = await res.json();
-      return data.nutrients ?? [];
+      const KEEP_NAMES = new Set(["DHA", "EPA", "ALA"]);
+      return (data.nutrients ?? []).filter((n: Nutrient) =>
+        !(/^[0-9]/.test(n.NutrDesc)) || KEEP_NAMES.has(n.NutrDesc)
+      );
     },
     staleTime: 1000 * 60 * 60,
   });
