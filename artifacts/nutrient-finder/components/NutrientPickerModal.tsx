@@ -22,9 +22,15 @@ interface Props {
   onSelect: (n: Nutrient) => void;
   loading: boolean;
   error: boolean;
+  isSubscribed: boolean;
+  freeNutrientNos: Set<string>;
+  onPaywallRequest: () => void;
 }
 
-export default function NutrientPickerModal({ nutrients, selected, onSelect, loading, error }: Props) {
+export default function NutrientPickerModal({
+  nutrients, selected, onSelect, loading, error,
+  isSubscribed, freeNutrientNos, onPaywallRequest,
+}: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
@@ -70,6 +76,20 @@ export default function NutrientPickerModal({ nutrients, selected, onSelect, loa
             </Pressable>
           </View>
 
+          {/* Subscription prompt banner */}
+          {!isSubscribed && (
+            <Pressable
+              style={styles.upgradeBanner}
+              onPress={() => { setVisible(false); onPaywallRequest(); }}
+            >
+              <MaterialIcons name="lock" size={15} color={colors.gold} />
+              <Text style={styles.upgradeText}>
+                Locked nutrients require NutriRank Pro · $9.99/yr
+              </Text>
+              <MaterialIcons name="arrow-forward-ios" size={12} color={colors.gold} />
+            </Pressable>
+          )}
+
           <View style={styles.searchRow}>
             <Ionicons name="search" size={18} color={colors.mutedForeground} style={styles.searchIcon} />
             <TextInput
@@ -98,31 +118,41 @@ export default function NutrientPickerModal({ nutrients, selected, onSelect, loa
             <FlatList
               data={filtered}
               keyExtractor={item => item.Nutr_No}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.listItem,
-                    selected?.Nutr_No === item.Nutr_No && styles.listItemSelected,
-                    pressed && styles.listItemPressed,
-                  ]}
-                  onPress={() => {
-                    onSelect(item);
-                    setVisible(false);
-                    setSearch("");
-                  }}
-                >
-                  <Text style={[
-                    styles.listItemText,
-                    selected?.Nutr_No === item.Nutr_No && styles.listItemTextSelected,
-                  ]}>
-                    {item.NutrDesc}
-                  </Text>
-                  <Text style={styles.listItemUnit}>{item.Units}</Text>
-                  {selected?.Nutr_No === item.Nutr_No && (
-                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-                  )}
-                </Pressable>
-              )}
+              renderItem={({ item }) => {
+                const isFree     = freeNutrientNos.has(item.Nutr_No);
+                const isLocked   = !isFree && !isSubscribed;
+                const isSelected = selected?.Nutr_No === item.Nutr_No;
+                return (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.listItem,
+                      isSelected && styles.listItemSelected,
+                      pressed && styles.listItemPressed,
+                    ]}
+                    onPress={() => {
+                      onSelect(item);       // parent handles paywall gate
+                      setVisible(false);
+                      setSearch("");
+                    }}
+                  >
+                    <View style={styles.listItemMain}>
+                      <Text style={[
+                        styles.listItemText,
+                        isSelected && styles.listItemTextSelected,
+                        isLocked && styles.listItemTextLocked,
+                      ]}>
+                        {item.NutrDesc}
+                      </Text>
+                      <Text style={styles.listItemUnit}>{item.Units}</Text>
+                    </View>
+                    {isLocked ? (
+                      <MaterialIcons name="lock" size={16} color={colors.mutedForeground} />
+                    ) : isSelected ? (
+                      <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                    ) : null}
+                  </Pressable>
+                );
+              }}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
@@ -138,15 +168,9 @@ export default function NutrientPickerModal({ nutrients, selected, onSelect, loa
 function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typeof useSafeAreaInsets>) {
   return StyleSheet.create({
     trigger: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.card,
-      borderWidth: 1.5,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 13,
-      gap: 8,
+      flexDirection: "row", alignItems: "center",
+      backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border,
+      borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, gap: 8,
     },
     triggerPressed: { opacity: 0.7 },
     triggerIcon: { flexShrink: 0 },
@@ -154,46 +178,41 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     triggerPlaceholder: { color: colors.mutedForeground },
     modalContainer: { flex: 1, backgroundColor: colors.background },
     modalHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      paddingHorizontal: 20, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
     },
     modalTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: colors.foreground },
     closeBtn: { padding: 4 },
+    upgradeBanner: {
+      flexDirection: "row", alignItems: "center", gap: 8,
+      backgroundColor: "#FFF8E1", borderBottomWidth: 1, borderBottomColor: "#FFE082",
+      paddingHorizontal: 16, paddingVertical: 10,
+    },
+    upgradeText: {
+      flex: 1, fontSize: 12, color: "#7B5E00", fontFamily: "Inter_500Medium",
+    },
     searchRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginHorizontal: 16,
-      marginVertical: 12,
-      backgroundColor: colors.muted,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      gap: 8,
+      flexDirection: "row", alignItems: "center",
+      marginHorizontal: 16, marginVertical: 12,
+      backgroundColor: colors.muted, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 10, gap: 8,
     },
     searchIcon: {},
     searchInput: {
-      flex: 1,
-      fontSize: 15,
-      color: colors.foreground,
-      fontFamily: "Inter_400Regular",
+      flex: 1, fontSize: 15, color: colors.foreground, fontFamily: "Inter_400Regular",
     },
     listItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      backgroundColor: colors.card,
-      gap: 8,
+      flexDirection: "row", alignItems: "center",
+      paddingHorizontal: 20, paddingVertical: 14,
+      backgroundColor: colors.card, gap: 8,
     },
+    listItemMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
     listItemSelected: { backgroundColor: colors.secondary },
     listItemPressed: { opacity: 0.6 },
     listItemText: { flex: 1, fontSize: 15, color: colors.foreground, fontFamily: "Inter_400Regular" },
     listItemTextSelected: { color: colors.primary, fontFamily: "Inter_600SemiBold" },
+    listItemTextLocked: { color: colors.mutedForeground },
     listItemUnit: { fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
     separator: { height: 1, backgroundColor: colors.border, marginLeft: 20 },
     centerMsg: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },

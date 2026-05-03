@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 
-import { PLANT_GROUP_CODES, ANIMAL_GROUP_CODES } from "@/constants/api";
+import { PLANT_GROUP_CODES, ANIMAL_GROUP_CODES, ALL_GROUP_CODES } from "@/constants/api";
 import { useColors } from "@/hooks/useColors";
 import { FoodGroup } from "@/types";
 
@@ -21,8 +21,9 @@ interface Props {
 }
 
 const SPECIAL_OPTIONS = [
-  { id: "__PLANTS__", label: "All Plants", icon: "eco" as const, codes: PLANT_GROUP_CODES },
-  { id: "__ANIMALS__", label: "All Animal", icon: "set-meal" as const, codes: ANIMAL_GROUP_CODES },
+  { id: "__ALL__",     label: "Select All", icon: "select-all" as const,  codes: ALL_GROUP_CODES },
+  { id: "__PLANTS__",  label: "All Plants", icon: "eco" as const,          codes: PLANT_GROUP_CODES },
+  { id: "__ANIMALS__", label: "All Animal", icon: "set-meal" as const,     codes: ANIMAL_GROUP_CODES },
 ];
 
 function isSetEqual(a: string[], b: string[]) {
@@ -49,25 +50,28 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
     if (selectedIds.includes(code)) {
       onChange(selectedIds.filter(id => id !== code));
     } else {
-      const cleaned = selectedIds.filter(id => !PLANT_GROUP_CODES.concat(ANIMAL_GROUP_CODES).includes(id) || !activeSpecial);
+      // If a special was active, deselect all special codes first
+      const allSpecialCodes = ALL_GROUP_CODES;
+      const cleaned = activeSpecial
+        ? selectedIds.filter(id => !allSpecialCodes.includes(id))
+        : selectedIds;
       onChange([...cleaned, code]);
     }
   }
 
-  const individualSelected = selectedIds.filter(
-    id => !PLANT_GROUP_CODES.concat(ANIMAL_GROUP_CODES).some(c => c === id && !!activeSpecial)
-  );
+  const hasSelection = selectedIds.length > 0;
 
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      {/* Row 1 — quick-select buttons */}
+      <View style={styles.row1}>
         {SPECIAL_OPTIONS.map(opt => {
           const isActive = activeSpecial?.id === opt.id;
           return (
             <Pressable
               key={opt.id}
               style={({ pressed }) => [
-                styles.chip,
+                styles.specialChip,
                 isActive ? styles.chipActive : styles.chipInactive,
                 pressed && styles.chipPressed,
               ]}
@@ -75,18 +79,32 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
             >
               <MaterialIcons
                 name={opt.icon}
-                size={15}
+                size={14}
                 color={isActive ? colors.primary : colors.mutedForeground}
               />
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{opt.label}</Text>
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                {opt.label}
+              </Text>
             </Pressable>
           );
         })}
 
-        <View style={styles.divider} />
+        {hasSelection && (
+          <Pressable onPress={() => onChange([])} style={styles.clearBtn}>
+            <MaterialIcons name="close" size={13} color={colors.mutedForeground} />
+            <Text style={styles.clearText}>Clear</Text>
+          </Pressable>
+        )}
+      </View>
 
+      {/* Row 2 — individual groups horizontal scroll */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
         {loading ? (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 8 }} />
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />
         ) : (
           groups.map(g => {
             const isActive = selectedIds.includes(g.FdGrp_Cd);
@@ -101,44 +119,48 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
                 ]}
                 onPress={() => handleGroup(g.FdGrp_Cd)}
               >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{label}</Text>
+                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                  {label}
+                </Text>
               </Pressable>
             );
           })
         )}
       </ScrollView>
-
-      {selectedIds.length > 0 && (
-        <Pressable onPress={() => onChange([])} style={styles.clearBtn}>
-          <MaterialIcons name="close" size={13} color={colors.mutedForeground} />
-          <Text style={styles.clearText}>Clear</Text>
-        </Pressable>
-      )}
     </View>
   );
 }
 
 function makeStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
-    container: { gap: 6 },
+    container: { gap: 8 },
+    row1: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      alignItems: "center",
+    },
     scroll: {
       flexDirection: "row",
       gap: 8,
-      paddingVertical: 4,
+      paddingVertical: 2,
       alignItems: "center",
     },
-    divider: {
-      width: 1,
-      height: 24,
-      backgroundColor: colors.border,
-      marginHorizontal: 4,
-    },
-    chip: {
+    specialChip: {
       flexDirection: "row",
       alignItems: "center",
       gap: 5,
       paddingHorizontal: 12,
       paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1.5,
+    },
+    chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingHorizontal: 11,
+      paddingVertical: 6,
       borderRadius: 20,
       borderWidth: 1.5,
     },
@@ -152,7 +174,7 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
     },
     chipPressed: { opacity: 0.65 },
     chipText: {
-      fontSize: 13,
+      fontSize: 12,
       color: colors.mutedForeground,
       fontFamily: "Inter_500Medium",
     },
@@ -164,8 +186,8 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
-      alignSelf: "flex-start",
-      paddingVertical: 2,
+      paddingVertical: 4,
+      paddingHorizontal: 6,
     },
     clearText: {
       fontSize: 12,

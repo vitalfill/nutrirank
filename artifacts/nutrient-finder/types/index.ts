@@ -31,3 +31,20 @@ export interface SearchResponse {
   foods: FoodResult[];
   error?: string;
 }
+
+export interface Favorite {
+  id: string;
+  nutrientNo: string;
+  nutrientDesc: string;
+  nutrientUnits: string;
+  foodNDB_No: string;
+  foodName: string;
+  nutrientValue: number;
+  selectedGroupIds: string[];
+  savedAt: number;
+}
+
+export interface Subscription {
+  email: string;
+  expiresAt: number;
+}

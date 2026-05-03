@@ -2,6 +2,17 @@
 require_once __DIR__ . '/cors.php';
 require_once __DIR__ . '/db.php';
 
+// Fatty acids to keep and rename to their common abbreviation
+$FATTY_ACID_RENAMES = [
+    '22:6 n-3 (DHA)' => 'DHA',
+    '20:5 n-3 (EPA)' => 'EPA',
+    '18:3 n-3 c,c,c (ALA)' => 'ALA',
+    // Also handle variants without parentheses
+    '22:6 n-3'       => 'DHA',
+    '20:5 n-3'       => 'EPA',
+    '18:3 n-3 c,c,c' => 'ALA',
+];
+
 try {
     $db = get_db();
     $stmt = $db->query(
@@ -9,7 +20,31 @@ try {
          FROM NUTR_DEF
          ORDER BY NutrDesc ASC"
     );
-    $nutrients = $stmt->fetchAll();
+    $rows = $stmt->fetchAll();
+
+    $nutrients = [];
+    foreach ($rows as $row) {
+        $desc = $row['NutrDesc'];
+
+        // Check if it's one of the special fatty acids to keep
+        if (isset($FATTY_ACID_RENAMES[$desc])) {
+            $row['NutrDesc'] = $FATTY_ACID_RENAMES[$desc];
+            $nutrients[] = $row;
+            continue;
+        }
+
+        // Skip nutrients whose description starts with a digit (fatty acid chains etc.)
+        if (preg_match('/^[0-9]/', $desc)) {
+            continue;
+        }
+
+        $nutrients[] = $row;
+    }
+
+    // Sort by renamed description
+    usort($nutrients, function($a, $b) {
+        return strcasecmp($a['NutrDesc'], $b['NutrDesc']);
+    });
 
     echo json_encode(['nutrients' => $nutrients], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {

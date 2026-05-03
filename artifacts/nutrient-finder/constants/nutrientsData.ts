@@ -302,6 +302,33 @@ export const NUTRIENT_DATA: Record<string, NutrientInfo> = {
       { icon: "monitor-heart", title: "Heart Health", description: "Lower triglycerides and reduce risk of arrhythmia by modulating cardiac ion channels." },
     ],
   },
+  // DHA — 22:6 n-3 (Nutr_No 621)
+  "621": {
+    roles: [
+      { icon: "psychology", title: "Brain & Memory", description: "DHA makes up ~25% of the brain's fatty acids and is critical for memory, mood, and cognitive performance." },
+      { icon: "visibility", title: "Eye Health", description: "A major structural fat in the retina — low DHA is linked to impaired vision and macular degeneration." },
+      { icon: "favorite", title: "Heart & Inflammation", description: "Reduces triglycerides and resolves inflammation via specialized pro-resolving mediators." },
+    ],
+    dailyValue: { dv: 500, unit: "mg", label: "500 mg (combined EPA+DHA)" },
+  },
+  // EPA — 20:5 n-3 (Nutr_No 629)
+  "629": {
+    roles: [
+      { icon: "favorite", title: "Cardiovascular Health", description: "EPA reduces triglycerides, lowers blood pressure, and decreases the risk of cardiac arrhythmia." },
+      { icon: "auto-awesome", title: "Anti-inflammatory", description: "EPA is the precursor to anti-inflammatory eicosanoids that resolve chronic inflammation." },
+      { icon: "psychology", title: "Mood & Mental Health", description: "Higher EPA levels are associated with lower rates of depression and anxiety." },
+    ],
+    dailyValue: { dv: 500, unit: "mg", label: "500 mg (combined EPA+DHA)" },
+  },
+  // ALA — 18:3 n-3 c,c,c (Nutr_No 851)
+  "851": {
+    roles: [
+      { icon: "eco", title: "Essential Fatty Acid", description: "ALA is the plant-based omega-3 the body cannot make — it must come from food (flaxseed, chia, walnuts)." },
+      { icon: "favorite", title: "Heart Health", description: "Associated with reduced cardiovascular disease risk, partly through conversion to EPA and DHA." },
+      { icon: "auto-awesome", title: "Anti-inflammatory Precursor", description: "ALA converts (inefficiently) to EPA and DHA, providing the building blocks for anti-inflammatory pathways." },
+    ],
+    dailyValue: { dv: 1600, unit: "mg", label: "1,600 mg" },
+  },
   "221": {
     roles: [
       { icon: "bolt", title: "Energy (Caloric)", description: "Provides 7 kcal/gram — metabolized preferentially before fat, protein, or carbohydrates." },

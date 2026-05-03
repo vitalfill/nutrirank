@@ -15,42 +15,62 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { API_BASE, FREE_PAGES_LIMIT } from "@/constants/api";
+import { API_BASE, FREE_NUTRIENT_NOS } from "@/constants/api";
 import { getNutrientInfo } from "@/constants/nutrientsData";
-import EmailGateModal from "@/components/EmailGateModal";
+import FavoritesModal from "@/components/FavoritesModal";
 import FoodGroupPicker from "@/components/FoodGroupPicker";
+import HowToUseModal from "@/components/HowToUseModal";
 import NutrientInfoBox from "@/components/NutrientInfoBox";
 import NutrientPickerModal from "@/components/NutrientPickerModal";
+import PaywallModal from "@/components/PaywallModal";
 import ResultCard from "@/components/ResultCard";
 import { useColors } from "@/hooks/useColors";
-import { FoodGroup, FoodResult, Nutrient, SearchResponse } from "@/types";
+import { Favorite, FoodGroup, FoodResult, Nutrient, SearchResponse, Subscription } from "@/types";
 
-const UNLOCK_KEY = "nutrient_finder_unlocked_email";
-const DEBOUNCE_MS = 600;
+const SUBSCRIPTION_KEY = "nutrirank_subscription";
+const FAVORITES_KEY    = "nutrirank_favorites";
+const DEBOUNCE_MS      = 600;
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
 
+  // ── nutrient + groups ──────────────────────────────────────────────────────
   const [selectedNutrient, setSelectedNutrient] = useState<Nutrient | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [page, setPage] = useState(1);
-  const [showGate, setShowGate] = useState(false);
-  const [unlockedEmail, setUnlockedEmail] = useState<string | null>(null);
 
-  const isUnlocked = unlockedEmail !== null;
-
+  // debounced versions for search
   const [debouncedNutrient, setDebouncedNutrient] = useState<Nutrient | null>(null);
   const [debouncedGroups, setDebouncedGroups] = useState<string[]>([]);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── paywall ────────────────────────────────────────────────────────────────
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [pendingNutrient, setPendingNutrient] = useState<Nutrient | null>(null);
+
+  const isSubscribed = subscription !== null && subscription.expiresAt > Date.now() / 1000;
+
+  // ── modals ─────────────────────────────────────────────────────────────────
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showHowTo, setShowHowTo] = useState(false);
+
+  // ── favorites ──────────────────────────────────────────────────────────────
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+
+  // ── hydrate from storage ───────────────────────────────────────────────────
   useEffect(() => {
-    AsyncStorage.getItem(UNLOCK_KEY).then(val => {
-      if (val) setUnlockedEmail(val);
+    AsyncStorage.multiGet([SUBSCRIPTION_KEY, FAVORITES_KEY]).then(pairs => {
+      const subRaw  = pairs[0][1];
+      const favRaw  = pairs[1][1];
+      if (subRaw)  { try { setSubscription(JSON.parse(subRaw)); } catch {} }
+      if (favRaw)  { try { setFavorites(JSON.parse(favRaw)); } catch {} }
     });
   }, []);
 
+  // ── debounce search ────────────────────────────────────────────────────────
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -61,10 +81,11 @@ export default function HomeScreen() {
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, [selectedNutrient, selectedGroupIds]);
 
+  // ── API queries ────────────────────────────────────────────────────────────
   const { data: nutrients = [], isLoading: nutrientsLoading, isError: nutrientsError } = useQuery<Nutrient[]>({
     queryKey: ["nutrients"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/nutrients.php`);
+      const res  = await fetch(`${API_BASE}/nutrients.php`);
       const data = await res.json();
       return data.nutrients ?? [];
     },
@@ -74,7 +95,7 @@ export default function HomeScreen() {
   const { data: foodGroups = [], isLoading: groupsLoading } = useQuery<FoodGroup[]>({
     queryKey: ["food-groups"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/food-groups.php`);
+      const res  = await fetch(`${API_BASE}/food-groups.php`);
       const data = await res.json();
       return data.groups ?? [];
     },
@@ -108,24 +129,78 @@ export default function HomeScreen() {
   });
 
   const nutrientInfo = selectedNutrient ? getNutrientInfo(selectedNutrient.Nutr_No) : null;
-  const dailyValue = nutrientInfo?.dailyValue?.dv;
+  const dailyValue   = nutrientInfo?.dailyValue?.dv;
 
-  function handlePageChange(newPage: number) {
-    if (newPage > FREE_PAGES_LIMIT && !isUnlocked) {
-      setShowGate(true);
+  // ── nutrient selection + paywall check ─────────────────────────────────────
+  function handleSelectNutrient(n: Nutrient) {
+    const isFree = FREE_NUTRIENT_NOS.has(n.Nutr_No);
+    if (!isFree && !isSubscribed) {
+      setPendingNutrient(n);
+      setShowPaywall(true);
       return;
     }
+    setSelectedNutrient(n);
+  }
+
+  async function handleSubscribed(sub: Subscription) {
+    setSubscription(sub);
+    setShowPaywall(false);
+    await AsyncStorage.setItem(SUBSCRIPTION_KEY, JSON.stringify(sub));
+    if (pendingNutrient) {
+      setSelectedNutrient(pendingNutrient);
+      setPendingNutrient(null);
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }
+
+  // ── pagination ─────────────────────────────────────────────────────────────
+  function handlePageChange(newPage: number) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPage(newPage);
   }
 
-  async function handleUnlock(email: string) {
-    setUnlockedEmail(email);
-    setShowGate(false);
-    await AsyncStorage.setItem(UNLOCK_KEY, email);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  // ── favorites ──────────────────────────────────────────────────────────────
+  function isFavorited(foodNDB_No: string) {
+    return favorites.some(f => f.foodNDB_No === foodNDB_No && f.nutrientNo === (debouncedNutrient?.Nutr_No ?? ""));
   }
 
+  async function toggleFavorite(item: FoodResult) {
+    const nutrNo = debouncedNutrient?.Nutr_No ?? "";
+    const existing = favorites.find(f => f.foodNDB_No === item.NDB_No && f.nutrientNo === nutrNo);
+    let next: Favorite[];
+    if (existing) {
+      next = favorites.filter(f => f.id !== existing.id);
+    } else {
+      const fav: Favorite = {
+        id: `${item.NDB_No}_${nutrNo}_${Date.now()}`,
+        nutrientNo: nutrNo,
+        nutrientDesc: debouncedNutrient?.NutrDesc ?? "",
+        nutrientUnits: debouncedNutrient?.Units ?? "",
+        foodNDB_No: item.NDB_No,
+        foodName: item.Long_Desc,
+        nutrientValue: item.Nutr_Val,
+        selectedGroupIds: [...debouncedGroups],
+        savedAt: Date.now(),
+      };
+      next = [fav, ...favorites];
+    }
+    setFavorites(next);
+    await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+  }
+
+  async function deleteFavorite(id: string) {
+    const next = favorites.filter(f => f.id !== id);
+    setFavorites(next);
+    await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+  }
+
+  function revisitFavorite(fav: Favorite) {
+    const n = nutrients.find(n => n.Nutr_No === fav.nutrientNo);
+    if (n) setSelectedNutrient(n);
+    setSelectedGroupIds(fav.selectedGroupIds);
+  }
+
+  // ── render helpers ─────────────────────────────────────────────────────────
   const renderResult = useCallback(({ item, index }: { item: FoodResult; index: number }) => (
     <ResultCard
       item={item}
@@ -134,8 +209,10 @@ export default function HomeScreen() {
       units={searchData?.nutrient.Units ?? ""}
       nutrNo={debouncedNutrient?.Nutr_No ?? ""}
       dailyValue={dailyValue}
+      isFavorited={isFavorited(item.NDB_No)}
+      onToggleFavorite={() => toggleFavorite(item)}
     />
-  ), [page, searchData, debouncedNutrient, dailyValue]);
+  ), [page, searchData, debouncedNutrient, dailyValue, favorites]);
 
   const ListHeader = useCallback(() => (
     <View style={styles.listHeader}>
@@ -153,9 +230,7 @@ export default function HomeScreen() {
       <View style={styles.pagination}>
         <Pressable
           style={({ pressed }) => [
-            styles.pageBtn,
-            page === 1 && styles.pageBtnDisabled,
-            pressed && { opacity: 0.7 },
+            styles.pageBtn, page === 1 && styles.pageBtnDisabled, pressed && { opacity: 0.7 },
           ]}
           onPress={() => handlePageChange(page - 1)}
           disabled={page === 1}
@@ -204,7 +279,9 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <MaterialIcons name="search" size={44} color={colors.warmAccent} />
           <Text style={styles.emptyTitle}>Select a Nutrient</Text>
-          <Text style={styles.emptyText}>Choose a nutrient above to begin exploring top food sources.</Text>
+          <Text style={styles.emptyText}>
+            Choose a nutrient above to discover which foods contain the most of it — ranked per 100 g.
+          </Text>
         </View>
       );
     }
@@ -237,6 +314,7 @@ export default function HomeScreen() {
     return null;
   }, [searchError, selectedNutrient, selectedGroupIds, searchLoading, searchFetching, searchData, colors, styles, refetchSearch]);
 
+  // ── render ─────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
       <FlatList
@@ -245,36 +323,67 @@ export default function HomeScreen() {
         renderItem={renderResult}
         ListHeaderComponent={
           <View style={styles.topSection}>
+            {/* ── App header ── */}
             <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
               <View style={styles.headerBrand}>
                 <MaterialIcons name="eco" size={22} color={colors.warmAccent} />
-                <Text style={styles.headerTitle}>NutrientFinder</Text>
+                <Text style={styles.headerTitle}>NutriRank</Text>
               </View>
-              {isUnlocked && (
-                <View style={styles.unlockedBadge}>
-                  <MaterialIcons name="lock-open" size={12} color={colors.accent} />
-                  <Text style={styles.unlockedText}>Unlocked</Text>
-                </View>
-              )}
+              <View style={styles.headerActions}>
+                {/* Favorites */}
+                <Pressable
+                  style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.7 }]}
+                  onPress={() => setShowFavorites(true)}
+                >
+                  <MaterialIcons name="star" size={20} color={colors.gold} />
+                  {favorites.length > 0 && (
+                    <View style={styles.favBadge}>
+                      <Text style={styles.favBadgeText}>
+                        {favorites.length > 99 ? "99+" : favorites.length}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+                {/* How to use */}
+                <Pressable
+                  style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.7 }]}
+                  onPress={() => setShowHowTo(true)}
+                >
+                  <MaterialIcons name="help-outline" size={20} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+                {/* Subscription badge */}
+                {isSubscribed && (
+                  <View style={styles.proBadge}>
+                    <MaterialIcons name="verified" size={12} color={colors.gold} />
+                    <Text style={styles.proBadgeText}>Pro</Text>
+                  </View>
+                )}
+              </View>
             </View>
 
+            {/* ── Nutrient picker ── */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>NUTRIENT</Text>
               <NutrientPickerModal
                 nutrients={nutrients}
                 selected={selectedNutrient}
-                onSelect={n => setSelectedNutrient(n)}
+                onSelect={handleSelectNutrient}
                 loading={nutrientsLoading}
                 error={nutrientsError}
+                isSubscribed={isSubscribed}
+                freeNutrientNos={FREE_NUTRIENT_NOS}
+                onPaywallRequest={() => setShowPaywall(true)}
               />
             </View>
 
+            {/* ── Nutrient info box ── */}
             {selectedNutrient && (
               <View style={styles.sectionNoLabel}>
                 <NutrientInfoBox nutrient={selectedNutrient} />
               </View>
             )}
 
+            {/* ── Food group picker ── */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>FOOD GROUPS</Text>
               <FoodGroupPicker
@@ -306,10 +415,24 @@ export default function HomeScreen() {
         ]}
       />
 
-      <EmailGateModal
-        visible={showGate}
-        onUnlock={handleUnlock}
-        onDismiss={() => setShowGate(false)}
+      {/* ── Modals ── */}
+      <PaywallModal
+        visible={showPaywall}
+        onSubscribed={handleSubscribed}
+        onDismiss={() => { setShowPaywall(false); setPendingNutrient(null); }}
+      />
+
+      <FavoritesModal
+        visible={showFavorites}
+        favorites={favorites}
+        onRevisit={revisitFavorite}
+        onDelete={deleteFavorite}
+        onClose={() => setShowFavorites(false)}
+      />
+
+      <HowToUseModal
+        visible={showHowTo}
+        onClose={() => setShowHowTo(false)}
       />
     </View>
   );
@@ -320,148 +443,84 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     container: { flex: 1, backgroundColor: colors.background },
     listContent: { flexGrow: 1 },
     header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingBottom: 14,
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      paddingHorizontal: 20, paddingBottom: 14,
       backgroundColor: colors.primary,
     },
-    headerBrand: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
+    headerBrand: { flexDirection: "row", alignItems: "center", gap: 8 },
+    headerTitle: { fontSize: 20, color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+    headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+    headerBtn: {
+      width: 36, height: 36, alignItems: "center", justifyContent: "center",
+      borderRadius: 10,
     },
-    headerTitle: {
-      fontSize: 20,
-      color: "#FFFFFF",
-      fontFamily: "Inter_700Bold",
+    favBadge: {
+      position: "absolute", top: 2, right: 2,
+      backgroundColor: colors.primary, borderRadius: 8,
+      minWidth: 15, height: 15,
+      alignItems: "center", justifyContent: "center",
+      borderWidth: 1.5, borderColor: "#FFFFFF",
     },
-    unlockedBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      backgroundColor: "rgba(255,255,255,0.2)",
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+    favBadgeText: { fontSize: 8, color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+    proBadge: {
+      flexDirection: "row", alignItems: "center", gap: 3,
+      backgroundColor: "rgba(255,255,255,0.15)",
+      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
     },
-    unlockedText: {
-      fontSize: 11,
-      color: "#FFFFFF",
-      fontFamily: "Inter_500Medium",
-    },
+    proBadgeText: { fontSize: 11, color: colors.gold, fontFamily: "Inter_700Bold" },
     topSection: { gap: 0 },
     section: {
-      gap: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      gap: 8, paddingHorizontal: 16, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
       backgroundColor: colors.background,
     },
     sectionNoLabel: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      paddingHorizontal: 16, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
       backgroundColor: colors.background,
     },
     sectionLabel: {
-      fontSize: 11,
-      color: colors.mutedForeground,
-      fontFamily: "Inter_600SemiBold",
-      letterSpacing: 0.8,
+      fontSize: 11, color: colors.mutedForeground,
+      fontFamily: "Inter_600SemiBold", letterSpacing: 0.8,
     },
-    listHeader: {
-      paddingHorizontal: 16,
-      paddingTop: 14,
-      paddingBottom: 6,
-    },
+    listHeader: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 },
     resultsCount: {
-      fontSize: 12,
-      color: colors.mutedForeground,
-      fontFamily: "Inter_400Regular",
+      fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular",
     },
     emptyState: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 60,
-      paddingHorizontal: 32,
-      gap: 10,
+      alignItems: "center", justifyContent: "center",
+      paddingVertical: 60, paddingHorizontal: 32, gap: 10,
     },
     emptyTitle: {
-      fontSize: 17,
-      color: colors.foreground,
-      fontFamily: "Inter_600SemiBold",
-      textAlign: "center",
+      fontSize: 17, color: colors.foreground,
+      fontFamily: "Inter_600SemiBold", textAlign: "center",
     },
     emptyText: {
-      fontSize: 14,
-      color: colors.mutedForeground,
-      fontFamily: "Inter_400Regular",
-      textAlign: "center",
-      lineHeight: 20,
+      fontSize: 14, color: colors.mutedForeground,
+      fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20,
     },
     retryBtn: {
-      marginTop: 8,
-      backgroundColor: colors.primary,
-      borderRadius: 10,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
+      marginTop: 8, backgroundColor: colors.primary,
+      borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10,
     },
-    retryText: {
-      fontSize: 14,
-      color: "#FFFFFF",
-      fontFamily: "Inter_600SemiBold",
-    },
+    retryText: { fontSize: 14, color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
     pagination: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginHorizontal: 16,
-      marginVertical: 16,
-      backgroundColor: colors.card,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: 4,
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      marginHorizontal: 16, marginVertical: 16,
+      backgroundColor: colors.card, borderRadius: 14,
+      borderWidth: 1, borderColor: colors.border, padding: 4,
     },
     pageBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 2,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 10,
-      backgroundColor: colors.secondary,
+      flexDirection: "row", alignItems: "center", gap: 2,
+      paddingHorizontal: 14, paddingVertical: 10,
+      borderRadius: 10, backgroundColor: colors.secondary,
     },
     pageBtnDisabled: { backgroundColor: colors.muted },
-    pageBtnText: {
-      fontSize: 14,
-      color: colors.primary,
-      fontFamily: "Inter_600SemiBold",
-    },
+    pageBtnText: { fontSize: 14, color: colors.primary, fontFamily: "Inter_600SemiBold" },
     pageBtnTextDisabled: { color: colors.mutedForeground },
-    pageIndicator: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    pageText: {
-      fontSize: 16,
-      color: colors.primary,
-      fontFamily: "Inter_700Bold",
-    },
-    pageSep: {
-      fontSize: 14,
-      color: colors.mutedForeground,
-      fontFamily: "Inter_400Regular",
-    },
-    pageTotalText: {
-      fontSize: 14,
-      color: colors.mutedForeground,
-      fontFamily: "Inter_400Regular",
-    },
+    pageIndicator: { flexDirection: "row", alignItems: "center", gap: 4 },
+    pageText: { fontSize: 16, color: colors.primary, fontFamily: "Inter_700Bold" },
+    pageSep: { fontSize: 14, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
+    pageTotalText: { fontSize: 14, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
   });
 }

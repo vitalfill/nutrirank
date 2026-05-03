@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Contains a mobile app (NutrientFinder) and an Express API server.
+pnpm workspace monorepo using TypeScript. Contains a mobile app (NutriRank) and an Express API server.
 
 ## Stack
 
@@ -18,19 +18,36 @@ pnpm workspace monorepo using TypeScript. Contains a mobile app (NutrientFinder)
 
 ## Artifacts
 
-### NutrientFinder (Expo Mobile App)
+### NutriRank (Expo Mobile App)
 - **Location**: `artifacts/nutrient-finder/`
-- **Purpose**: FDA food database nutrient lookup tool; replicates functionality of drgily.com/top-foods-by-nutrient-new.php
-- **Backend**: PHP API files in `artifacts/nutrient-finder/php-api/` — must be uploaded to `https://drgily.com/app-api/`
-- **Features**:
-  - Nutrient picker (searchable modal, pulls from drgily.com MySQL DB)
-  - Food group multi-select (includes "All Plants" and "All Animal" shortcuts)
-  - Auto-search with debounce (no search button needed)
-  - Results with serving size adjustment (updates % DV and amount)
-  - Daily Value % bar per result
-  - Nutrient info box (top 3 body roles per nutrient)
-  - Freemium email gate after 2 free pages (emails stored in `app_unlocks` DB table)
-  - Green color palette throughout
+- **App name**: NutriRank
+- **Purpose**: FDA food database nutrient ranking tool — ranks foods richest in any nutrient per 100 g
+- **Backend**: PHP API files in `artifacts/nutrient-finder/php-api/` — upload to `https://drgily.com/app-api/`
+
+### Features
+- **Nutrient picker**: searchable modal; strips digit-starting nutrient names; DHA/EPA/ALA shown with common names; lock icon on premium nutrients
+- **Food group picker**: 2-row layout — Row 1: Select All / All Plants / All Animal quick buttons; Row 2: individual groups on horizontal scroll
+- **Results**: ranked per 100 g, star to favorite, serving size selector, % DV bar
+- **Nutrient info box**: shows top 3 body roles + DV for selected nutrient
+- **How-to modal**: 5-step guide + DV explanation + 100 g baseline note
+- **Favorites**: save food + nutrient combos, revisit from star icon in header
+- **Paywall**: Free nutrients: Energy(kcal), Protein, Fat, Histidine, Calcium, Potassium, Vitamin A, Vitamin K, EPA. All others require $9.99/yr Stripe subscription
+- **Stripe flow**: email → create-checkout.php → Stripe Checkout → verify via check-subscription.php
+
+### Free Nutrient IDs (no subscription needed)
+`208, 203, 204, 504, 301, 306, 320, 318, 430, 629`
+
+### AsyncStorage keys
+- `nutrirank_subscription` — `{ email, expiresAt }` (Unix timestamp)
+- `nutrirank_favorites` — `Favorite[]` JSON array
+
+### PHP API Files (upload to drgily.com/app-api/)
+- `config.php` — DB credentials + Stripe keys (STRIPE_SECRET_KEY, STRIPE_PRICE_ID)
+- `nutrients.php` — filters digit-starting names, renames DHA/EPA/ALA
+- `create-checkout.php` — creates Stripe Checkout session
+- `check-subscription.php` — verifies active subscription + caches in `app_subscriptions` DB table
+- `subscribe-success.php` — Stripe success redirect page
+- See `php-api/README.md` for full setup instructions
 
 ### API Server
 - **Location**: `artifacts/api-server/`
@@ -40,26 +57,8 @@ pnpm workspace monorepo using TypeScript. Contains a mobile app (NutrientFinder)
 - **Location**: `artifacts/mockup-sandbox/`
 - **Paths**: `/__mockup`
 
-## PHP API Files (upload to drgily.com)
-
-Upload `artifacts/nutrient-finder/php-api/` contents to `https://drgily.com/app-api/`:
-- `config.php` — DB credentials
-- `db.php` — PDO connection helper
-- `cors.php` — CORS headers for mobile app access
-- `nutrients.php` — GET list of all nutrients
-- `food-groups.php` — GET list of food groups
-- `search.php` — POST search with pagination
-- `register-email.php` — POST email unlock registration
-- `daily_values.json` — FDA daily values reference
-- `nutrient_roles.json` — Top 3 nutrient roles reference
-- `README.md` — Setup instructions
-
 ## Key Commands
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
+- `pnpm run typecheck` — full typecheck
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
-
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

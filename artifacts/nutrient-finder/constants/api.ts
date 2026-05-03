@@ -22,3 +22,19 @@ export const ANIMAL_GROUP_CODES = [
   "1500",
   "1700",
 ];
+
+export const ALL_GROUP_CODES = [...PLANT_GROUP_CODES, ...ANIMAL_GROUP_CODES];
+
+// Nutrient numbers that are always free (no subscription required)
+// 208=Energy(kcal), 203=Protein, 204=Fat, 504=Histidine,
+// 301=Calcium, 306=Potassium, 320=Vitamin A RAE, 318=Vitamin A IU,
+// 430=Vitamin K, 629=EPA (20:5 n-3)
+export const FREE_NUTRIENT_NOS = new Set([
+  "208", "203", "204", "504",
+  "301", "306", "320", "318",
+  "430", "629",
+]);
+
+export const SUBSCRIPTION_PRICE = "$9.99 / year";
+export const STRIPE_CHECKOUT_URL = `${API_BASE}/create-checkout.php`;
+export const STRIPE_VERIFY_URL = `${API_BASE}/check-subscription.php`;

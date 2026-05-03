@@ -1,4 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import React, { useState, useCallback } from "react";
 import {
   FlatList,
@@ -21,9 +22,13 @@ interface Props {
   units: string;
   nutrNo: string;
   dailyValue?: number;
+  isFavorited: boolean;
+  onToggleFavorite: () => void;
 }
 
-export default function ResultCard({ item, rank, nutrientLabel, units, nutrNo, dailyValue }: Props) {
+export default function ResultCard({
+  item, rank, nutrientLabel, units, nutrNo, dailyValue, isFavorited, onToggleFavorite,
+}: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
@@ -48,6 +53,11 @@ export default function ResultCard({ item, rank, nutrientLabel, units, nutrNo, d
   const servingLabel = selectedWeight.Gm_Wgt === 100 && selectedWeight.Msre_Desc === "g"
     ? "100 g"
     : `${selectedWeight.Amount % 1 === 0 ? selectedWeight.Amount.toFixed(0) : selectedWeight.Amount.toFixed(1)} ${selectedWeight.Msre_Desc}`;
+
+  function handleFavorite() {
+    Haptics.impactAsync(isFavorited ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
+    onToggleFavorite();
+  }
 
   const renderWeightOption = useCallback(({ item: w }: { item: FoodWeight }) => {
     const label = w.Gm_Wgt === 100 && w.Msre_Desc === "g"
@@ -78,6 +88,17 @@ export default function ResultCard({ item, rank, nutrientLabel, units, nutrNo, d
           <Text style={styles.rankText}>{rank}</Text>
         </View>
         <Text style={styles.foodName} numberOfLines={2}>{item.Long_Desc}</Text>
+        <Pressable
+          onPress={handleFavorite}
+          hitSlop={8}
+          style={({ pressed }) => [styles.starBtn, pressed && { opacity: 0.6 }]}
+        >
+          <MaterialIcons
+            name={isFavorited ? "star" : "star-border"}
+            size={22}
+            color={isFavorited ? colors.gold : colors.border}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.bottomRow}>
@@ -98,7 +119,7 @@ export default function ResultCard({ item, rank, nutrientLabel, units, nutrNo, d
           </Text>
           <Text style={styles.unitText}>{units}</Text>
           {dvPercent !== null && (
-            <View style={styles.dvPill}>
+            <View style={[styles.dvPill, dvPercent >= 20 ? styles.dvPillHigh : dvPercent >= 6 ? styles.dvPillMid : styles.dvPillLow]}>
               <Text style={styles.dvText}>{dvPercent}% DV</Text>
             </View>
           )}
@@ -145,148 +166,71 @@ export default function ResultCard({ item, rank, nutrientLabel, units, nutrNo, d
 function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typeof useSafeAreaInsets>) {
   return StyleSheet.create({
     card: {
-      backgroundColor: colors.card,
-      borderRadius: 14,
-      padding: 14,
-      marginHorizontal: 16,
-      marginVertical: 5,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 10,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.04,
-      shadowRadius: 4,
-      elevation: 1,
+      backgroundColor: colors.card, borderRadius: 14, padding: 14,
+      marginHorizontal: 16, marginVertical: 5,
+      borderWidth: 1, borderColor: colors.border, gap: 10,
+      shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
     },
-    topRow: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: 10,
-    },
+    topRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
     rankBadge: {
-      width: 28,
-      height: 28,
-      borderRadius: 8,
+      width: 28, height: 28, borderRadius: 8,
       backgroundColor: colors.rankBadge,
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
+      alignItems: "center", justifyContent: "center", flexShrink: 0,
     },
-    rankText: {
-      fontSize: 12,
-      color: "#FFFFFF",
-      fontFamily: "Inter_700Bold",
-    },
+    rankText: { fontSize: 12, color: "#FFFFFF", fontFamily: "Inter_700Bold" },
     foodName: {
-      flex: 1,
-      fontSize: 14,
-      color: colors.foreground,
-      fontFamily: "Inter_500Medium",
-      lineHeight: 20,
+      flex: 1, fontSize: 14, color: colors.foreground,
+      fontFamily: "Inter_500Medium", lineHeight: 20,
     },
+    starBtn: { flexShrink: 0, paddingTop: 1 },
     bottomRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 8,
+      flexDirection: "row", alignItems: "center",
+      justifyContent: "space-between", gap: 8,
     },
     servingBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      backgroundColor: colors.muted,
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      flex: 1,
+      flexDirection: "row", alignItems: "center", gap: 5,
+      backgroundColor: colors.muted, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 6, flex: 1,
     },
     servingText: {
-      flex: 1,
-      fontSize: 12,
-      color: colors.foreground,
-      fontFamily: "Inter_400Regular",
+      flex: 1, fontSize: 12, color: colors.foreground, fontFamily: "Inter_400Regular",
     },
-    valueWrap: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    valueText: {
-      fontSize: 15,
-      color: colors.primary,
-      fontFamily: "Inter_700Bold",
-    },
-    unitText: {
-      fontSize: 12,
-      color: colors.mutedForeground,
-      fontFamily: "Inter_400Regular",
-    },
+    valueWrap: { flexDirection: "row", alignItems: "center", gap: 4 },
+    valueText: { fontSize: 15, color: colors.primary, fontFamily: "Inter_700Bold" },
+    unitText: { fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
     dvPill: {
-      backgroundColor: colors.secondary,
-      borderRadius: 6,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
+      borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
     },
-    dvText: {
-      fontSize: 10,
-      color: colors.primary,
-      fontFamily: "Inter_600SemiBold",
-    },
+    dvPillHigh: { backgroundColor: colors.secondary },
+    dvPillMid:  { backgroundColor: "#FFF3C4" },
+    dvPillLow:  { backgroundColor: "#FFECEC" },
+    dvText: { fontSize: 10, color: colors.primary, fontFamily: "Inter_600SemiBold" },
     dvBarBg: {
-      height: 4,
-      backgroundColor: colors.dvBarBg,
-      borderRadius: 2,
-      overflow: "hidden",
+      height: 4, backgroundColor: colors.dvBarBg, borderRadius: 2, overflow: "hidden",
     },
-    dvBarFill: {
-      height: 4,
-      backgroundColor: colors.dvBar,
-      borderRadius: 2,
-    },
+    dvBarFill: { height: 4, backgroundColor: colors.dvBar, borderRadius: 2 },
     overlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.35)",
-      justifyContent: "flex-end",
+      flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end",
     },
     sheet: {
-      backgroundColor: colors.card,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      paddingTop: 12,
-      paddingHorizontal: 16,
+      backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      paddingTop: 12, paddingHorizontal: 16,
     },
     sheetHandle: {
-      width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: colors.border,
-      alignSelf: "center",
-      marginBottom: 14,
+      width: 36, height: 4, borderRadius: 2,
+      backgroundColor: colors.border, alignSelf: "center", marginBottom: 14,
     },
     sheetTitle: {
-      fontSize: 15,
-      fontFamily: "Inter_600SemiBold",
-      color: colors.foreground,
-      marginBottom: 12,
+      fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.foreground, marginBottom: 12,
     },
     weightOption: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: 13,
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 13,
     },
     weightOptionSelected: {},
     weightOptionPressed: { opacity: 0.6 },
-    weightOptionText: {
-      fontSize: 15,
-      color: colors.foreground,
-      fontFamily: "Inter_400Regular",
-    },
-    weightOptionTextSelected: {
-      color: colors.primary,
-      fontFamily: "Inter_600SemiBold",
-    },
+    weightOptionText: { fontSize: 15, color: colors.foreground, fontFamily: "Inter_400Regular" },
+    weightOptionTextSelected: { color: colors.primary, fontFamily: "Inter_600SemiBold" },
     weightSep: { height: 1, backgroundColor: colors.border },
   });
 }
