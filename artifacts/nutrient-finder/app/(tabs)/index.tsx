@@ -29,11 +29,11 @@ import PaywallModal from "@/components/PaywallModal";
 import ResultCard from "@/components/ResultCard";
 import SearchHistory from "@/components/SearchHistory";
 import { useColors } from "@/hooks/useColors";
+import { useSubscription } from "@/lib/revenuecat";
 import {
-  Favorite, FoodGroup, FoodResult, Nutrient, SearchResponse, Subscription,
+  Favorite, FoodGroup, FoodResult, Nutrient, SearchResponse,
 } from "@/types";
 
-const SUBSCRIPTION_KEY  = "nutrirank_subscription";
 const FAVORITES_KEY     = "nutrirank_favorites";
 const HISTORY_KEY       = "nutrirank_search_history";
 const MAX_HISTORY       = 8;
@@ -54,10 +54,9 @@ export default function HomeScreen() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── paywall ────────────────────────────────────────────────────────────────
-  const [subscription,    setSubscription]    = useState<Subscription | null>(null);
+  const { isSubscribed } = useSubscription();
   const [showPaywall,     setShowPaywall]     = useState(false);
   const [pendingNutrient, setPendingNutrient] = useState<Nutrient | null>(null);
-  const isSubscribed = subscription !== null && subscription.expiresAt > Date.now() / 1000;
 
   // ── modals ─────────────────────────────────────────────────────────────────
   const [showFavorites, setShowFavorites] = useState(false);
@@ -72,15 +71,25 @@ export default function HomeScreen() {
   const [favorites,      setFavorites]      = useState<Favorite[]>([]);
   const [searchHistory,  setSearchHistory]  = useState<Nutrient[]>([]);
 
-  // ── hydrate ────────────────────────────────────────────────────────────────
+  // ── hydrate favorites + history ────────────────────────────────────────────
   useEffect(() => {
-    AsyncStorage.multiGet([SUBSCRIPTION_KEY, FAVORITES_KEY, HISTORY_KEY]).then(pairs => {
-      const [subRaw, favRaw, histRaw] = pairs.map(p => p[1]);
-      try { if (subRaw)  setSubscription(JSON.parse(subRaw));  } catch {}
+    AsyncStorage.multiGet([FAVORITES_KEY, HISTORY_KEY]).then(pairs => {
+      const [favRaw, histRaw] = pairs.map(p => p[1]);
       try { if (favRaw)  setFavorites(JSON.parse(favRaw));     } catch {}
       try { if (histRaw) setSearchHistory(JSON.parse(histRaw));} catch {}
     });
   }, []);
+
+  // ── unlock pending nutrient once subscription is confirmed ─────────────────
+  useEffect(() => {
+    if (isSubscribed && pendingNutrient) {
+      setSelectedNutrient(pendingNutrient);
+      addToHistory(pendingNutrient);
+      setPendingNutrient(null);
+      setShowPaywall(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [isSubscribed]);
 
   // ── debounce ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -167,19 +176,6 @@ export default function HomeScreen() {
   async function clearHistory() {
     setSearchHistory([]);
     await AsyncStorage.removeItem(HISTORY_KEY);
-  }
-
-  // ── subscription ───────────────────────────────────────────────────────────
-  async function handleSubscribed(sub: Subscription) {
-    setSubscription(sub);
-    setShowPaywall(false);
-    await AsyncStorage.setItem(SUBSCRIPTION_KEY, JSON.stringify(sub));
-    if (pendingNutrient) {
-      setSelectedNutrient(pendingNutrient);
-      await addToHistory(pendingNutrient);
-      setPendingNutrient(null);
-    }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
   // ── share ──────────────────────────────────────────────────────────────────
@@ -476,7 +472,6 @@ export default function HomeScreen() {
       {/* Modals */}
       <PaywallModal
         visible={showPaywall}
-        onSubscribed={handleSubscribed}
         onDismiss={() => { setShowPaywall(false); setPendingNutrient(null); }}
       />
       <FavoritesModal
