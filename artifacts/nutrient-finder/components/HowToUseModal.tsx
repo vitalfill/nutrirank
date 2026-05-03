@@ -134,6 +134,9 @@ export default function HowToUseModal({ visible, onClose }: Props) {
               <Text style={styles.noteBold}>Why 100 g?</Text> Ranking by 100 g puts every food on the same level playing field, making comparisons fair and consistent. Use the serving size selector on each card to see real-world amounts.
             </Text>
           </View>
+
+          {/* Copyright */}
+          <Text style={styles.copyright}>© Copyright Vital Fill LLC 2026</Text>
         </ScrollView>
       </View>
     </Modal>
@@ -202,5 +205,10 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       flex: 1, fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", lineHeight: 19,
     },
     noteBold: { fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    copyright: {
+      fontSize: 11, color: colors.mutedForeground,
+      fontFamily: "Inter_400Regular", textAlign: "center",
+      paddingTop: 4, paddingBottom: 8,
+    },
   });
 }
