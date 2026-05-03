@@ -54,11 +54,19 @@ interface Props {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
+// SR_Order ranges from USDA SR28 NUTR_DEF table:
+//   0–4999   : Proximates (water, energy, protein, fat, ash, carbs, fiber, sugars…)
+//   5000–5999: Minerals (Ca, Fe, Mg, P, K, Na, Zn, Cu, Mn, Se, F, Cr, Mo…)
+//   6000–8999: Vitamins (C, B-vitamins, A, D, E, K, folate, choline…)
+//   9000–15999: Lipids / Fatty acids (4:0 through 22:6 n-3)
+//  16000–17999: Amino acids (Trp, Thr, Ile, Leu, Lys, Met, Cys, Phe, Tyr, Val…)
+//  ≥ 18000   : Other (alcohol, caffeine, theobromine, fluoride, etc.)
 
-const PROXIMATES_MAX = 350;
-const MINERALS_MAX   = 500;
-const VITAMINS_MAX   = 650;
-const LIPIDS_MAX     = 800;
+const PROXIMATES_MAX = 5000;
+const MINERALS_MAX   = 6000;
+const VITAMINS_MAX   = 9000;
+const LIPIDS_MAX     = 16000;
+const AMINO_MAX      = 18000;
 
 /** FDA daily values used to compute % DV */
 const DV_MAP: Record<string, number> = {
@@ -204,9 +212,10 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
 
   const proximates = data?.nutrients.filter(n => n.SR_Order < PROXIMATES_MAX) ?? [];
   const minerals   = data?.nutrients.filter(n => n.SR_Order >= PROXIMATES_MAX && n.SR_Order < MINERALS_MAX) ?? [];
-  const vitamins   = data?.nutrients.filter(n => n.SR_Order >= MINERALS_MAX && n.SR_Order < VITAMINS_MAX) ?? [];
-  const fatty      = data?.nutrients.filter(n => n.SR_Order >= VITAMINS_MAX && n.SR_Order < LIPIDS_MAX) ?? [];
-  const amino      = data?.nutrients.filter(n => n.SR_Order >= LIPIDS_MAX) ?? [];
+  const vitamins   = data?.nutrients.filter(n => n.SR_Order >= MINERALS_MAX  && n.SR_Order < VITAMINS_MAX) ?? [];
+  const fatty      = data?.nutrients.filter(n => n.SR_Order >= VITAMINS_MAX  && n.SR_Order < LIPIDS_MAX) ?? [];
+  const amino      = data?.nutrients.filter(n => n.SR_Order >= LIPIDS_MAX    && n.SR_Order < AMINO_MAX) ?? [];
+  const other      = data?.nutrients.filter(n => n.SR_Order >= AMINO_MAX) ?? [];
 
   const energy    = proximates.find(n => n.Nutr_No === "208" || n.NutrDesc.toLowerCase().startsWith("energy"));
   const mainRows  = proximates.filter(n => n !== energy);
@@ -365,6 +374,15 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
                 </Pressable>
                 {expandAmino && amino.map(n => (
                   <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} indent grams={selectedGrams} />
+                ))}
+              </>
+            )}
+
+            {other.length > 0 && (
+              <>
+                <SectionHeader title={`Other (${other.length})`} colors={colors} />
+                {other.map(n => (
+                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} grams={selectedGrams} />
                 ))}
               </>
             )}
