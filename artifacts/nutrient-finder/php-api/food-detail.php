@@ -33,6 +33,16 @@ try {
     $stmt->execute([$ndb_no]);
     $rows = $stmt->fetchAll();
 
+    // Serving weights from WEIGHT table
+    $wStmt = $db->prepare(
+        "SELECT Amount, Msre_Desc, Gm_Wgt
+         FROM WEIGHT
+         WHERE NDB_No = ?
+         ORDER BY Seq ASC"
+    );
+    $wStmt->execute([$ndb_no]);
+    $weightRows = $wStmt->fetchAll();
+
     // Rename the key fatty acids
     $RENAMES = [
         '22:6 n-3 (DHA)' => 'DHA (22:6 n-3)',
@@ -57,11 +67,21 @@ try {
         ];
     }
 
+    $weights = [];
+    foreach ($weightRows as $w) {
+        $weights[] = [
+            'Amount'    => (float)$w['Amount'],
+            'Msre_Desc' => $w['Msre_Desc'],
+            'Gm_Wgt'    => (float)$w['Gm_Wgt'],
+        ];
+    }
+
     echo json_encode([
         'ndb_no'    => $ndb_no,
         'Long_Desc' => $food['Long_Desc'],
         'FdGrp_Cd'  => $food['FdGrp_Cd'],
         'nutrients' => $nutrients,
+        'weights'   => $weights,
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (PDOException $e) {
