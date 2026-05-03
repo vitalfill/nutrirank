@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { PLANT_GROUP_CODES, ANIMAL_GROUP_CODES, ALL_GROUP_CODES } from "@/constants/api";
+import { DIETARY_FILTERS } from "@/constants/dietaryFilters";
 import { useColors } from "@/hooks/useColors";
 import { FoodGroup } from "@/types";
 
@@ -37,23 +38,24 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
   const styles = makeStyles(colors);
 
   const activeSpecial = SPECIAL_OPTIONS.find(opt => isSetEqual(selectedIds, opt.codes)) ?? null;
+  const activeDietary = DIETARY_FILTERS.find(opt => isSetEqual(selectedIds, opt.groupCodes)) ?? null;
 
   function handleSpecial(opt: typeof SPECIAL_OPTIONS[0]) {
-    if (activeSpecial?.id === opt.id) {
-      onChange([]);
-    } else {
-      onChange([...opt.codes]);
-    }
+    if (activeSpecial?.id === opt.id) onChange([]);
+    else onChange([...opt.codes]);
+  }
+
+  function handleDietary(opt: (typeof DIETARY_FILTERS)[0]) {
+    if (activeDietary?.id === opt.id) onChange([]);
+    else onChange([...opt.groupCodes]);
   }
 
   function handleGroup(code: string) {
     if (selectedIds.includes(code)) {
       onChange(selectedIds.filter(id => id !== code));
     } else {
-      // If a special was active, deselect all special codes first
-      const allSpecialCodes = ALL_GROUP_CODES;
-      const cleaned = activeSpecial
-        ? selectedIds.filter(id => !allSpecialCodes.includes(id))
+      const cleaned = activeSpecial || activeDietary
+        ? selectedIds.filter(id => !ALL_GROUP_CODES.includes(id))
         : selectedIds;
       onChange([...cleaned, code]);
     }
@@ -63,7 +65,28 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
 
   return (
     <View style={styles.container}>
-      {/* Row 1 — quick-select buttons */}
+      {/* Row 0 — Dietary quick-filters */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {DIETARY_FILTERS.map(opt => {
+          const isActive = activeDietary?.id === opt.id;
+          return (
+            <Pressable
+              key={opt.id}
+              style={({ pressed }) => [
+                styles.dietaryChip,
+                isActive ? styles.dietaryChipActive : styles.dietaryChipInactive,
+                pressed && styles.chipPressed,
+              ]}
+              onPress={() => handleDietary(opt)}
+            >
+              <Text style={styles.dietaryEmoji}>{opt.emoji}</Text>
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{opt.label}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {/* Row 1 — quick-select + clear */}
       <View style={styles.row1}>
         {SPECIAL_OPTIONS.map(opt => {
           const isActive = activeSpecial?.id === opt.id;
@@ -146,6 +169,24 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       paddingVertical: 2,
       alignItems: "center",
     },
+    dietaryChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1.5,
+    },
+    dietaryChipActive: {
+      backgroundColor: colors.chipActive,
+      borderColor: colors.chipActiveBorder,
+    },
+    dietaryChipInactive: {
+      backgroundColor: colors.chipInactive,
+      borderColor: colors.chipInactiveBorder,
+    },
+    dietaryEmoji: { fontSize: 13 },
     specialChip: {
       flexDirection: "row",
       alignItems: "center",

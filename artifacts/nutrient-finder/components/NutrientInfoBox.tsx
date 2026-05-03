@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { getNutrientInfo } from "@/constants/nutrientsData";
+import { getInteraction } from "@/constants/interactions";
 import { Nutrient } from "@/types";
 
 interface Props {
@@ -27,6 +28,7 @@ function safeIcon(name: string): MaterialIconName {
 export default function NutrientInfoBox({ nutrient }: Props) {
   const colors = useColors();
   const info = getNutrientInfo(nutrient.Nutr_No);
+  const interaction = getInteraction(nutrient.Nutr_No);
 
   if (!info) return null;
 
@@ -57,6 +59,14 @@ export default function NutrientInfoBox({ nutrient }: Props) {
           </View>
         ))}
       </View>
+
+      {/* Nutrient interaction note */}
+      {interaction && (
+        <View style={styles.interactionRow}>
+          <MaterialIcons name="link" size={14} color={colors.gold} />
+          <Text style={styles.interactionText}>{interaction}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -122,6 +132,23 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       color: colors.mutedForeground,
       fontFamily: "Inter_400Regular",
       lineHeight: 17,
+    },
+    interactionRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 7,
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    interactionText: {
+      flex: 1,
+      fontSize: 12,
+      color: colors.foreground,
+      fontFamily: "Inter_400Regular",
+      lineHeight: 18,
     },
   });
 }

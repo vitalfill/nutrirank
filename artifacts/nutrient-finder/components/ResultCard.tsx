@@ -24,10 +24,12 @@ interface Props {
   dailyValue?: number;
   isFavorited: boolean;
   onToggleFavorite: () => void;
+  onPressFood: (ndbNo: string, foodName: string) => void;
 }
 
 export default function ResultCard({
-  item, rank, nutrientLabel, units, nutrNo, dailyValue, isFavorited, onToggleFavorite,
+  item, rank, nutrientLabel, units, nutrNo, dailyValue,
+  isFavorited, onToggleFavorite, onPressFood,
 }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -87,7 +89,16 @@ export default function ResultCard({
         <View style={styles.rankBadge}>
           <Text style={styles.rankText}>{rank}</Text>
         </View>
-        <Text style={styles.foodName} numberOfLines={2}>{item.Long_Desc}</Text>
+
+        {/* Tappable food name → opens Food Detail */}
+        <Pressable
+          style={({ pressed }) => [styles.foodNameBtn, pressed && { opacity: 0.65 }]}
+          onPress={() => onPressFood(item.NDB_No, item.Long_Desc)}
+        >
+          <Text style={styles.foodName} numberOfLines={2}>{item.Long_Desc}</Text>
+          <MaterialIcons name="open-in-new" size={12} color={colors.mutedForeground} style={{ marginTop: 2 }} />
+        </Pressable>
+
         <Pressable
           onPress={handleFavorite}
           hitSlop={8}
@@ -119,7 +130,10 @@ export default function ResultCard({
           </Text>
           <Text style={styles.unitText}>{units}</Text>
           {dvPercent !== null && (
-            <View style={[styles.dvPill, dvPercent >= 20 ? styles.dvPillHigh : dvPercent >= 6 ? styles.dvPillMid : styles.dvPillLow]}>
+            <View style={[
+              styles.dvPill,
+              dvPercent >= 20 ? styles.dvPillHigh : dvPercent >= 6 ? styles.dvPillMid : styles.dvPillLow,
+            ]}>
               <Text style={styles.dvText}>{dvPercent}% DV</Text>
             </View>
           )}
@@ -179,9 +193,14 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       alignItems: "center", justifyContent: "center", flexShrink: 0,
     },
     rankText: { fontSize: 12, color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+    foodNameBtn: {
+      flex: 1, flexDirection: "row", alignItems: "flex-start", gap: 4,
+    },
     foodName: {
-      flex: 1, fontSize: 14, color: colors.foreground,
+      flex: 1, fontSize: 14, color: colors.primary,
       fontFamily: "Inter_500Medium", lineHeight: 20,
+      textDecorationLine: "underline",
+      textDecorationColor: colors.border,
     },
     starBtn: { flexShrink: 0, paddingTop: 1 },
     bottomRow: {
@@ -199,9 +218,7 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     valueWrap: { flexDirection: "row", alignItems: "center", gap: 4 },
     valueText: { fontSize: 15, color: colors.primary, fontFamily: "Inter_700Bold" },
     unitText: { fontSize: 12, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
-    dvPill: {
-      borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
-    },
+    dvPill: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
     dvPillHigh: { backgroundColor: colors.secondary },
     dvPillMid:  { backgroundColor: "#FFF3C4" },
     dvPillLow:  { backgroundColor: "#FFECEC" },

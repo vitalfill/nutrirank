@@ -2,31 +2,22 @@ const colors = {
   light: {
     text: "#1B2B1B",
     tint: "#2D6A4F",
-
     background: "#F5FAF5",
     foreground: "#1B2B1B",
-
     card: "#FFFFFF",
     cardForeground: "#1B2B1B",
-
     primary: "#2D6A4F",
     primaryForeground: "#FFFFFF",
-
     secondary: "#D8EFD3",
     secondaryForeground: "#2D6A4F",
-
     muted: "#EBF5EB",
     mutedForeground: "#6B8F6B",
-
     accent: "#40916C",
     accentForeground: "#FFFFFF",
-
     destructive: "#C62828",
     destructiveForeground: "#FFFFFF",
-
     border: "#C5E1C5",
     input: "#D8EFD3",
-
     highlight: "#52B788",
     warmAccent: "#95D5B2",
     gold: "#E9C46A",
@@ -40,6 +31,39 @@ const colors = {
     infoBox: "#F0FAF0",
     infoBoxBorder: "#95D5B2",
     rolePill: "#D8EFD3",
+  },
+  dark: {
+    text: "#E0F0E3",
+    tint: "#52B788",
+    background: "#0D1B12",
+    foreground: "#E0F0E3",
+    card: "#152218",
+    cardForeground: "#E0F0E3",
+    primary: "#52B788",
+    primaryForeground: "#0D1B12",
+    secondary: "#1E3527",
+    secondaryForeground: "#74C99A",
+    muted: "#192C20",
+    mutedForeground: "#7DB98C",
+    accent: "#74C99A",
+    accentForeground: "#0D1B12",
+    destructive: "#F28B82",
+    destructiveForeground: "#0D1B12",
+    border: "#2A4D36",
+    input: "#1E3527",
+    highlight: "#74C99A",
+    warmAccent: "#74C99A",
+    gold: "#E9C46A",
+    chipActive: "#1E3527",
+    chipActiveBorder: "#52B788",
+    chipInactive: "#152218",
+    chipInactiveBorder: "#2A4D36",
+    dvBar: "#74C99A",
+    dvBarBg: "#192C20",
+    rankBadge: "#52B788",
+    infoBox: "#152E1E",
+    infoBoxBorder: "#2A4D36",
+    rolePill: "#1E3527",
   },
   radius: 12,
 };
