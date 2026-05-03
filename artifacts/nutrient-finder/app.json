@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "NutrientFinder",
-    "slug": "nutrient-finder",
+    "name": "NutriRank",
+    "slug": "nutrirank",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nutrient-finder",
-    "userInterfaceStyle": "light",
+    "scheme": "nutrirank",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/icon.png",
@@ -14,9 +14,13 @@
       "backgroundColor": "#2D6A4F"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.vitalfill.nutrirank",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.vitalfill.nutrirank",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#2D6A4F"
