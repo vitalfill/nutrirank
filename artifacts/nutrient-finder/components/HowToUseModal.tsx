@@ -1,4 +1,5 @@
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import * as Linking from "expo-linking";
 import React from "react";
 import {
   Modal,
@@ -10,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const PRIVACY_URL = "https://vital-fill.com/privacy.php";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -135,7 +138,11 @@ export default function HowToUseModal({ visible, onClose }: Props) {
             </Text>
           </View>
 
-          {/* Copyright */}
+          {/* Privacy + Copyright */}
+          <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} style={styles.privacyLink}>
+            <MaterialIcons name="privacy-tip" size={13} color="#40916C" />
+            <Text style={styles.privacyText}>Privacy Policy</Text>
+          </Pressable>
           <Text style={styles.copyright}>© Copyright Vital Fill LLC 2026</Text>
         </ScrollView>
       </View>
@@ -205,10 +212,18 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       flex: 1, fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", lineHeight: 19,
     },
     noteBold: { fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    privacyLink: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
+      paddingVertical: 6,
+    },
+    privacyText: {
+      fontSize: 12, color: "#40916C", fontFamily: "Inter_600SemiBold",
+      textDecorationLine: "underline",
+    },
     copyright: {
       fontSize: 11, color: colors.mutedForeground,
       fontFamily: "Inter_400Regular", textAlign: "center",
-      paddingTop: 4, paddingBottom: 8,
+      paddingBottom: 8,
     },
   });
 }

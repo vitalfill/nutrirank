@@ -1,4 +1,5 @@
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import * as Linking from "expo-linking";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -10,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const PRIVACY_URL = "https://vital-fill.com/privacy.php";
 
 import { useSubscription } from "@/lib/revenuecat";
 import { useColors } from "@/hooks/useColors";
@@ -152,7 +155,10 @@ export default function PaywallModal({ visible, onDismiss }: Props) {
           </Pressable>
 
           <Text style={styles.legalText}>
-            Payment processed by Apple/Google. Subscription auto-renews annually.
+            Payment processed by Apple/Google. Subscription auto-renews annually.{" "}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
           </Text>
         </View>
       </Modal>
@@ -247,6 +253,9 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     legalText: {
       fontSize: 11, color: colors.mutedForeground,
       fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 4,
+    },
+    legalLink: {
+      color: colors.primary, textDecorationLine: "underline",
     },
     confirmOverlay: {
       flex: 1, backgroundColor: "rgba(0,0,0,0.6)",
