@@ -2,6 +2,7 @@ export interface Nutrient {
   Nutr_No: string;
   NutrDesc: string;
   Units: string;
+  is_free?: boolean;
 }
 
 export interface FoodGroup {

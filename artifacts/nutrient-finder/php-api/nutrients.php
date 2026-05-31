@@ -2,6 +2,10 @@
 require_once __DIR__ . '/cors.php';
 require_once __DIR__ . '/db.php';
 
+// Nutrient numbers that are always free (no subscription required).
+// This is the canonical server-side list; search.php enforces it on every request.
+const FREE_NUTRIENT_NOS = ['208', '203', '204', '504', '301', '306', '320', '318', '430', '629', '257', '513'];
+
 // Fatty acids to keep and rename to their common abbreviation
 $FATTY_ACID_RENAMES = [
     '22:6 n-3 (DHA)' => 'DHA',
@@ -29,6 +33,7 @@ try {
         // Check if it's one of the special fatty acids to keep
         if (isset($FATTY_ACID_RENAMES[$desc])) {
             $row['NutrDesc'] = $FATTY_ACID_RENAMES[$desc];
+            $row['is_free']  = in_array($row['Nutr_No'], FREE_NUTRIENT_NOS, true);
             $nutrients[] = $row;
             continue;
         }
@@ -38,6 +43,7 @@ try {
             continue;
         }
 
+        $row['is_free'] = in_array($row['Nutr_No'], FREE_NUTRIENT_NOS, true);
         $nutrients[] = $row;
     }
 
@@ -49,5 +55,5 @@ try {
     echo json_encode(['nutrients' => $nutrients], JSON_UNESCAPED_UNICODE);
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database error', 'message' => $e->getMessage()]);
+    echo json_encode(['error' => 'Database error']);
 }

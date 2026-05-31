@@ -26,12 +26,14 @@ Upload every file in this folder to `https://drgily.com/app-api/`.
 
 ### 2. Edit `config.php`
 ```php
-define('STRIPE_SECRET_KEY', 'sk_live_...');   // Your Stripe live secret key
-define('STRIPE_PRICE_ID',   'price_...');     // Your $9.99/year recurring price ID
+define('STRIPE_SECRET_KEY',      'sk_live_...');   // Your Stripe live secret key
+define('STRIPE_PRICE_ID',        'price_...');     // Your $9.99/year recurring price ID
+define('REVENUECAT_SECRET_KEY',  'sk_...');        // Your RevenueCat secret key
 ```
 
 - **Stripe secret key**: Stripe Dashboard → Developers → API keys → Secret key
 - **Price ID**: Stripe Dashboard → Products → Create a product → Add a $9.99/year recurring price → copy the `price_xxxxx` ID
+- **RevenueCat secret key**: RevenueCat Dashboard → Project → API keys → Secret key (starts with `sk_`). This is used by `search.php` to verify a subscriber's `premium` entitlement server-side before returning premium nutrient results. **Until this is set, all premium nutrient searches will return 403.**
 
 ### 3. Test
 Open `https://drgily.com/app-api/nutrients.php` in a browser — you should see a JSON list of nutrients.
@@ -92,8 +94,10 @@ Returns all food groups.
 
 ### POST /search.php
 ```json
-{ "nutrient_no": "301", "food_groups": ["0900", "1100"], "page": 1 }
+{ "nutrient_no": "301", "food_groups": ["0900", "1100"], "page": 1, "rc_app_user_id": "<RevenueCat appUserID>" }
 ```
+Free nutrients (`is_free: true` in the nutrients list) do not require `rc_app_user_id`.
+Premium nutrients return **403** if `rc_app_user_id` is missing or does not have an active `premium` entitlement in RevenueCat.
 
 ### POST /create-checkout.php
 ```json

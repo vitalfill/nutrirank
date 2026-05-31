@@ -54,7 +54,7 @@ export default function HomeScreen() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── paywall ────────────────────────────────────────────────────────────────
-  const { isSubscribed } = useSubscription();
+  const { isSubscribed, appUserID } = useSubscription();
   const [showPaywall,     setShowPaywall]     = useState(false);
   const [pendingNutrient, setPendingNutrient] = useState<Nutrient | null>(null);
 
@@ -135,16 +135,20 @@ export default function HomeScreen() {
     isError: searchError,
     refetch: refetchSearch,
   } = useQuery<SearchResponse>({
-    queryKey: ["search", debouncedNutrient?.Nutr_No, debouncedGroups, page],
+    queryKey: ["search", debouncedNutrient?.Nutr_No, debouncedGroups, page, appUserID],
     queryFn: async () => {
+      const body: Record<string, unknown> = {
+        nutrient_no: debouncedNutrient!.Nutr_No,
+        food_groups: debouncedGroups,
+        page,
+      };
+      if (appUserID) {
+        body.rc_app_user_id = appUserID;
+      }
       const res = await fetch(`${API_BASE}/search.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nutrient_no: debouncedNutrient!.Nutr_No,
-          food_groups: debouncedGroups,
-          page,
-        }),
+        body: JSON.stringify(body),
       });
       return res.json();
     },

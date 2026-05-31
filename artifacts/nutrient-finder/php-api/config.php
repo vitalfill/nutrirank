@@ -14,5 +14,11 @@ define('STRIPE_SECRET_KEY', 'sk_live_...');  // ← replace with your live secre
 // then paste the price ID here (starts with price_)
 define('STRIPE_PRICE_ID', 'price_...');      // ← replace
 
+// ─── RevenueCat ──────────────────────────────────────────────────────────────
+// RevenueCat Dashboard → Project → API keys → Secret key (starts with sk_...)
+// Used server-side to verify that a subscriber has an active "premium" entitlement
+// before serving premium nutrient search results.
+define('REVENUECAT_SECRET_KEY', 'sk_...');   // ← replace with your RevenueCat secret key
+
 // URL of this api folder (no trailing slash)
 define('APP_BASE_URL', 'https://drgily.com/app-api');
