@@ -172,3 +172,14 @@ overrides:
   "brace-expansion@2": "2.1.1"
   # postcss: XSS via unescaped </style> (GHSA-qx2v-qp2m-jg93)
   postcss: "8.5.15"
+  # fast-uri: vulnerabilities GHSA-q3j6-qgpj-74h6, GHSA-v39h-62p7-jpjc
+  fast-uri: "3.1.2"
+  # ws: DoS vulnerability GHSA-58qx-3vcg-4xpx
+  "ws@8": "8.21.0"
+  # brace-expansion v5: ReDoS GHSA-jxxr-4gwj-5jf2
+  "brace-expansion@5": "5.0.6"
+  # qs: prototype pollution GHSA-q8mj-m7cp-5q26
+  qs: "6.15.2"
+  # uuid v3 and v7: predictable PRNG GHSA-w5hq-g745-h8pq (no patch in v3/v7 range; patched >=11.1.1)
+  "uuid@3": "11.1.1"
+  "uuid@7": "11.1.1"
