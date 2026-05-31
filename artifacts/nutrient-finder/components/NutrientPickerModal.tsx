@@ -84,7 +84,7 @@ export default function NutrientPickerModal({
             >
               <MaterialIcons name="lock" size={15} color={colors.gold} />
               <Text style={styles.upgradeText}>
-                Locked nutrients require NutriRank Pro · $9.99/yr
+                Locked nutrients require NutriRank Pro · $7.99/yr
               </Text>
               <MaterialIcons name="arrow-forward-ios" size={12} color={colors.gold} />
             </Pressable>

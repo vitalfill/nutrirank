@@ -41,7 +41,7 @@ export default function PaywallModal({ visible, onDismiss }: Props) {
 
   const currentOffering = offerings?.current;
   const packageToPurchase = currentOffering?.availablePackages[0];
-  const priceString = packageToPurchase?.product.priceString ?? "$9.99";
+  const priceString = packageToPurchase?.product.priceString ?? "$7.99";
 
   async function handleSubscribe() {
     if (!packageToPurchase) {
