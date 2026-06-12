@@ -11,6 +11,9 @@ Upload the contents of this folder to your server at `https://drgily.com/app-api
 | `cors.php` | CORS headers (allows the mobile app to call these endpoints) |
 | `nutrients.php` | Returns nutrients (strips digit-starting names; renames DHA/EPA/ALA) |
 | `food-groups.php` | Returns all food groups from `FD_GROUP` table |
+| `rc-webhook.php` | Receives RevenueCat purchase/renewal webhooks; writes a server-side claim code |
+| `register-subscription.php` | Claims a webhook-verified credential (or RC-verified fallback) for a device |
+| `verify-entitlement.php` | Issues a short-lived session token given a registered device credential |
 | `search.php` | Runs the nutrient/food-group search with pagination |
 | `register-email.php` | Legacy email unlock (kept for backward compat) |
 | `create-checkout.php` | Creates a Stripe Checkout session → returns URL; also issues a verify token |
@@ -61,7 +64,7 @@ SetEnv NUTRIRANK_REVENUECAT_SECRET_KEY sk_...
 Open `https://drgily.com/app-api/nutrients.php` in a browser — you should see a JSON list of nutrients.
 
 ### 4. Tables auto-created
-`create-checkout.php` creates `app_verify_tokens` and `check-subscription.php` creates `app_subscriptions` automatically on first use:
+`create-checkout.php` creates `app_verify_tokens`, `check-subscription.php` creates `app_subscriptions`, and `verify-entitlement.php` creates `entitlement_sessions` automatically on first use:
 ```sql
 CREATE TABLE app_verify_tokens (
     id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -79,6 +82,54 @@ CREATE TABLE app_subscriptions (
     stripe_sub_id VARCHAR(255),
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Written by rc-webhook.php when a RevenueCat purchase/renewal webhook fires.
+-- Each row is a one-time claim code; register-subscription.php marks it claimed.
+CREATE TABLE rc_webhook_claims (
+    id             INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    rc_app_user_id VARCHAR(255) NOT NULL,
+    event_type     VARCHAR(64)  NOT NULL,
+    claim_code     CHAR(64)     NOT NULL UNIQUE,
+    claimed_at     DATETIME     DEFAULT NULL,
+    expires_at     DATETIME     NOT NULL,
+    created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_app_user (rc_app_user_id),
+    INDEX idx_claim    (claim_code),
+    INDEX idx_expires  (expires_at)
+);
+
+-- Server-issued device credentials: one per rc_app_user_id (UNIQUE constraint).
+-- Written by register-subscription.php after webhook-claim or fallback verification.
+CREATE TABLE device_credentials (
+    id               INT UNSIGNED  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    credential_hash  CHAR(64)      NOT NULL UNIQUE,
+    rc_app_user_id   VARCHAR(255)  NOT NULL UNIQUE,
+    source           ENUM('webhook','fallback') NOT NULL DEFAULT 'fallback',
+    last_verified_at DATETIME      NOT NULL,
+    created_at       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_cred_hash (credential_hash),
+    INDEX idx_app_user  (rc_app_user_id)
+);
+
+-- Rate-limit log for the migration fallback path in register-subscription.php.
+CREATE TABLE rc_fallback_registrations (
+    id             INT UNSIGNED  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    rc_app_user_id VARCHAR(255)  NOT NULL UNIQUE,
+    last_attempt   DATETIME      NOT NULL,
+    INDEX idx_app_user (rc_app_user_id)
+);
+
+-- Short-lived session tokens issued by verify-entitlement.php.
+-- Each credential may have at most one active session at a time.
+CREATE TABLE entitlement_sessions (
+    id              INT UNSIGNED  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    token_hash      CHAR(64)      NOT NULL UNIQUE,
+    credential_hash CHAR(64)      NOT NULL,
+    expires_at      DATETIME      NOT NULL,
+    created_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_cred_hash (credential_hash),
+    INDEX idx_expires   (expires_at)
 );
 ```
 
@@ -126,12 +177,53 @@ Returns filtered & renamed nutrients sorted alphabetically.
 ### GET /food-groups.php
 Returns all food groups.
 
+### POST /rc-webhook.php
+Receives RevenueCat webhooks (`INITIAL_PURCHASE`, `RENEWAL`, `RESUBSCRIBE`, etc.). Validates the `Authorization: Bearer <NUTRIRANK_RC_WEBHOOK_SECRET>` header and writes a one-time claim code for the relevant `rc_app_user_id`. Returns `200`.
+
+> **Setup:** RevenueCat Dashboard → Project → Integrations → Webhooks. Point the webhook at `https://drgily.com/app-api/rc-webhook.php` and set the generated shared secret as `NUTRIRANK_RC_WEBHOOK_SECRET` on the server.
+
+### POST /generate-restore-nonce.php
+Returns a server-generated 256-bit nonce for use in the restore flow. No body required.
+
+```json
+{ "nonce": "<64-char hex>" }
+```
+
+### POST /register-subscription.php
+Issues a server-generated device credential. **Never accepts `rc_app_user_id` alone.** Always requires a webhook-verified claim to consume.
+
+**Purchase path:**
+```json
+{ "transaction_id": "<App Store / Play Store transaction ID from SDK>" }
+```
+Client sends the `transaction.transactionIdentifier` returned by the RC SDK's `purchasePackage()` result. The server atomically claims the matching row in `rc_webhook_claims` (which `rc-webhook.php` wrote from the trusted purchase webhook) and issues a credential. An attacker who knows only `rc_app_user_id` cannot reproduce the transaction ID.
+
+**Restore path (nonce-bound):**
+```json
+{ "restore_nonce": "<64-char hex from generate-restore-nonce.php>" }
+```
+The client must first call `generate-restore-nonce.php`, then set the nonce as a RevenueCat subscriber attribute via `Purchases.setAttributes({ restore_nonce: nonce })`, then call `Purchases.restorePurchases()`. RC fires a webhook that includes the nonce in `event.subscriber_attributes.restore_nonce.value`. `rc-webhook.php` stores the nonce in `rc_webhook_claims`. The client then calls this endpoint with `{ restore_nonce }` — the server claims the webhook row by nonce and issues a credential.
+
+**Why this is secure:** Writing to a subscriber's RC attributes requires running the SDK under that user's `app_user_id` context. A third party who merely knows the subscriber's `rc_app_user_id` cannot inject their own nonce into the target account — they'd be writing to their own (different) account.
+
+Returns `{ "credential": "<64-char hex>" }`, **202** if webhook claim not yet arrived (retry after a few seconds), or **409** if a webhook-verified credential already exists.
+
+### POST /verify-entitlement.php
+```json
+{ "credential": "<64-char hex from AsyncStorage>" }
+```
+Validates the server-issued device credential and issues a short-lived session token. Periodically re-verifies with RevenueCat (every 4 h) to catch lapsed subscriptions. Never accepts `rc_app_user_id`.
+```json
+{ "token": "<64-char random hex>", "expires_in": 300 }
+```
+The session token is valid for **5 minutes**. Returns **403** if the credential is unrecognised, the subscription has lapsed, or the input is invalid.
+
 ### POST /search.php
 ```json
-{ "nutrient_no": "301", "food_groups": ["0900", "1100"], "page": 1, "rc_app_user_id": "<RevenueCat appUserID>" }
+{ "nutrient_no": "301", "food_groups": ["0900", "1100"], "page": 1, "rc_entitlement_token": "<token from verify-entitlement.php>" }
 ```
-Free nutrients (`is_free: true` in the nutrients list) do not require `rc_app_user_id`.
-Premium nutrients return **403** if `rc_app_user_id` is missing or does not have an active `premium` entitlement in RevenueCat.
+Free nutrients do not require `rc_entitlement_token`.  
+Premium nutrients return **403** if `rc_entitlement_token` is missing, not found in the DB, or expired.
 
 ### POST /create-checkout.php
 ```json

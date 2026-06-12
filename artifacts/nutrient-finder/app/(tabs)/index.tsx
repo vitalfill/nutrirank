@@ -39,6 +39,12 @@ const HISTORY_KEY       = "nutrirank_search_history";
 const MAX_HISTORY       = 8;
 const DEBOUNCE_MS       = 600;
 
+// Thrown by the search queryFn when the user is subscribed but the device credential
+// hasn't been issued yet (webhook still in flight, or first-launch bootstrap in progress).
+// Caught by the EmptyOrPrompt component to render a "restore to activate" prompt instead
+// of a generic error or — worse — a runtime crash from parsing a 403 JSON as SearchResponse.
+const ERR_CREDENTIAL_MISSING = "CREDENTIAL_MISSING";
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -54,7 +60,7 @@ export default function HomeScreen() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── paywall ────────────────────────────────────────────────────────────────
-  const { isSubscribed, appUserID } = useSubscription();
+  const { isSubscribed, restore, getEntitlementToken } = useSubscription();
   const [showPaywall,     setShowPaywall]     = useState(false);
   const [pendingNutrient, setPendingNutrient] = useState<Nutrient | null>(null);
 
@@ -133,24 +139,41 @@ export default function HomeScreen() {
     isLoading: searchLoading,
     isFetching: searchFetching,
     isError: searchError,
+    error:   searchErrorObj,
     refetch: refetchSearch,
   } = useQuery<SearchResponse>({
-    queryKey: ["search", debouncedNutrient?.Nutr_No, debouncedGroups, page, appUserID],
+    queryKey: ["search", debouncedNutrient?.Nutr_No, debouncedGroups, page],
     queryFn: async () => {
       const body: Record<string, unknown> = {
         nutrient_no: debouncedNutrient!.Nutr_No,
         food_groups: debouncedGroups,
         page,
       };
-      if (appUserID) {
-        body.rc_app_user_id = appUserID;
+      const isFree = FREE_NUTRIENT_NOS.has(debouncedNutrient!.Nutr_No);
+      if (!isFree) {
+        // Obtain a short-lived session token from verify-entitlement.php.
+        // rc_app_user_id is never forwarded; search.php trusts only the token.
+        const token = await getEntitlementToken();
+        if (token) {
+          body.rc_entitlement_token = token;
+        } else {
+          // Subscribed but no device credential yet: bootstrap may still be in
+          // flight (webhook delay, first launch after upgrade).  Throw a typed
+          // error so EmptyOrPrompt can render a restore prompt instead of
+          // crashing on the 403 error JSON parsed as SearchResponse.
+          throw new Error(ERR_CREDENTIAL_MISSING);
+        }
       }
       const res = await fetch(`${API_BASE}/search.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      return res.json();
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).error ?? `HTTP ${res.status}`);
+      }
+      return res.json() as Promise<SearchResponse>;
     },
     enabled: canSearch,
     staleTime: 1000 * 60 * 5,
@@ -314,16 +337,38 @@ export default function HomeScreen() {
   }, [searchData, page, colors, styles]);
 
   const EmptyOrPrompt = useCallback(() => {
-    if (searchError) return (
-      <View style={styles.emptyState}>
-        <MaterialIcons name="error-outline" size={44} color={colors.destructive} />
-        <Text style={styles.emptyTitle}>Connection Error</Text>
-        <Text style={styles.emptyText}>Could not reach drgily.com.</Text>
-        <Pressable style={styles.retryBtn} onPress={() => refetchSearch()}>
-          <Text style={styles.retryText}>Try Again</Text>
-        </Pressable>
-      </View>
-    );
+    if (searchError) {
+      const isCredentialMissing = (searchErrorObj as Error | null)?.message === ERR_CREDENTIAL_MISSING;
+      if (isCredentialMissing) return (
+        <View style={styles.emptyState}>
+          <MaterialIcons name="lock-clock" size={44} color={colors.warmAccent} />
+          <Text style={styles.emptyTitle}>Activating Subscription…</Text>
+          <Text style={styles.emptyText}>
+            Your subscription is recognised, but device access is still being set up.
+            Tap below to restore your access.
+          </Text>
+          <Pressable
+            style={styles.retryBtn}
+            onPress={async () => {
+              try { await restore(); } catch {}
+              refetchSearch();
+            }}
+          >
+            <Text style={styles.retryText}>Restore Access</Text>
+          </Pressable>
+        </View>
+      );
+      return (
+        <View style={styles.emptyState}>
+          <MaterialIcons name="error-outline" size={44} color={colors.destructive} />
+          <Text style={styles.emptyTitle}>Connection Error</Text>
+          <Text style={styles.emptyText}>Could not reach drgily.com.</Text>
+          <Pressable style={styles.retryBtn} onPress={() => refetchSearch()}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </Pressable>
+        </View>
+      );
+    }
     if (!selectedNutrient) return (
       <View style={styles.emptyState}>
         <MaterialIcons name="search" size={44} color={colors.warmAccent} />
@@ -361,7 +406,7 @@ export default function HomeScreen() {
       </View>
     );
     return null;
-  }, [searchError, selectedNutrient, selectedGroupIds, searchLoading, searchFetching, searchData, colors, styles, refetchSearch]);
+  }, [searchError, searchErrorObj, selectedNutrient, selectedGroupIds, searchLoading, searchFetching, searchData, colors, styles, refetchSearch, restore]);
 
   // ── main render ────────────────────────────────────────────────────────────
   return (

@@ -20,6 +20,12 @@ define('STRIPE_PRICE_ID',   getenv('NUTRIRANK_STRIPE_PRICE_ID')   ?: '');  // pr
 // before serving premium nutrient search results.
 define('REVENUECAT_SECRET_KEY', getenv('NUTRIRANK_REVENUECAT_SECRET_KEY') ?: '');
 
+// RevenueCat webhook shared secret.
+// RevenueCat Dashboard → Project → Integrations → Webhooks → shared secret.
+// rc-webhook.php validates every incoming webhook against this secret.
+// If unset, rc-webhook.php will reject all webhook calls (fail-closed).
+define('NUTRIRANK_RC_WEBHOOK_SECRET', getenv('NUTRIRANK_RC_WEBHOOK_SECRET') ?: '');
+
 // ─── API access secret ────────────────────────────────────────────────────────
 // Callers must send this value in the X-Api-Key request header to access
 // sensitive endpoints (e.g. check-subscription.php).  Generate a random string
