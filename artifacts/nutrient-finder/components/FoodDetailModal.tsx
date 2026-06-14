@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { API_BASE } from "@/constants/api";
-import { DV_BY_PROFILE, UserProfile, DEFAULT_PROFILE, PROFILE_LABELS } from "@/constants/userProfile";
+import { getDV, getProfileLabel, UserProfile, DEFAULT_PROFILE } from "@/constants/userProfile";
 import { useColors } from "@/hooks/useColors";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ function formatVal(v: number): string {
 }
 
 function dvPercent(per100g: number, nutrNo: string, grams: number, profile: UserProfile): number | null {
-  const dv = DV_BY_PROFILE[profile][nutrNo];
+  const dv = getDV(nutrNo, profile);
   if (!dv) return null;
   const scaled = scaleVal(per100g, grams);
   return Math.round((scaled / dv) * 100);
@@ -407,7 +407,7 @@ export default function FoodDetailModal({ ndbNo, foodName, profile = DEFAULT_PRO
             )}
 
             <Text style={styles.footNote}>
-              * % Daily Values are personalised for {PROFILE_LABELS[profile]} per FDA Dietary Reference Intakes.{"\n"}
+              * % Daily Values are personalised for {getProfileLabel(profile)} per NIH Dietary Reference Intakes.{"\n"}
               Source: USDA Food Data Central via drgily.com.
             </Text>
             <Text style={styles.footNote}>© Vital Fill LLC 2026</Text>

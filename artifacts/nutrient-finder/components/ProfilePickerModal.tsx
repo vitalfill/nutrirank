@@ -1,110 +1,177 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import React from "react";
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  Modal, Platform, Pressable, ScrollView,
+  StyleSheet, Text, View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
-import { UserProfile, PROFILE_LABELS } from "@/constants/userProfile";
+import {
+  UserProfile, Sex, AgeGroup, PregnancyStatus,
+  AGE_GROUPS, pregnancyAllowed, getProfileLabel,
+} from "@/constants/userProfile";
 
 interface Props {
-  visible: boolean;
-  current: UserProfile;
+  visible:  boolean;
+  current:  UserProfile;
   onSelect: (profile: UserProfile) => void;
-  onClose: () => void;
+  onClose:  () => void;
 }
-
-type IconName = React.ComponentProps<typeof MaterialIcons>["name"];
-
-const PROFILES: { key: UserProfile; icon: IconName; desc: string }[] = [
-  {
-    key: "male",
-    icon: "person",
-    desc: "Adult male RDAs — e.g. Iron 8 mg, ALA 1.6 g, Potassium 3,400 mg",
-  },
-  {
-    key: "female",
-    icon: "person-outline",
-    desc: "Adult female RDAs — e.g. Iron 18 mg, ALA 1.1 g, Potassium 2,600 mg",
-  },
-  {
-    key: "pregnant",
-    icon: "child-care",
-    desc: "Pregnant / Lactating — higher needs (e.g. Iron 27 mg, Folate 600 mcg, ALA 1.4 g)",
-  },
-];
 
 export default function ProfilePickerModal({ visible, current, onSelect, onClose }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors);
 
+  const [draft, setDraft] = useState<UserProfile>(current);
+
+  useEffect(() => { if (visible) setDraft(current); }, [visible, current]);
+
+  function update(changes: Partial<UserProfile>) {
+    setDraft(prev => {
+      const next: UserProfile = { ...prev, ...changes };
+      if (next.sex === "male" || !pregnancyAllowed(next.age)) next.pregnancy = "none";
+      return next;
+    });
+  }
+
+  function apply() { onSelect(draft); onClose(); }
+
+  const showPregnancy = draft.sex === "female" && pregnancyAllowed(draft.age);
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <View
-          style={[styles.sheet, { paddingBottom: Platform.OS === "web" ? 24 : insets.bottom + 12 }]}
+          style={[styles.sheet, { paddingBottom: Platform.OS === "web" ? 24 : insets.bottom + 8 }]}
           onStartShouldSetResponder={() => true}
         >
           <View style={styles.handle} />
           <Text style={styles.title}>Nutritional Profile</Text>
           <Text style={styles.subtitle}>
-            Selects gender-specific daily values (% DV) based on FDA Dietary Reference Intakes
+            Personalises % DV using NIH Dietary Reference Intakes by sex, age &amp; status
           </Text>
 
-          <View style={styles.optionList}>
-            {PROFILES.map(p => {
-              const isSelected = p.key === current;
+          {/* Sex */}
+          <SectionLabel label="BIOLOGICAL SEX" colors={colors} />
+          <View style={styles.row}>
+            {(["male", "female"] as Sex[]).map(s => {
+              const active = draft.sex === s;
               return (
                 <Pressable
-                  key={p.key}
-                  style={({ pressed }) => [
-                    styles.option,
-                    isSelected && styles.optionSelected,
-                    pressed && styles.optionPressed,
-                  ]}
-                  onPress={() => { onSelect(p.key); onClose(); }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: isSelected }}
+                  key={s}
+                  style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+                  onPress={() => update({ sex: s })}
                 >
-                  <View style={[styles.iconWrap, isSelected && styles.iconWrapSelected]}>
-                    <MaterialIcons
-                      name={p.icon}
-                      size={22}
-                      color={isSelected ? "#FFFFFF" : colors.primary}
-                    />
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
-                      {PROFILE_LABELS[p.key]}
-                    </Text>
-                    <Text style={styles.optionDesc}>{p.desc}</Text>
-                  </View>
-                  {isSelected && (
-                    <MaterialIcons name="check-circle" size={20} color={colors.primary} />
-                  )}
+                  <MaterialIcons
+                    name={s === "male" ? "person" : "person-outline"}
+                    size={18}
+                    color={active ? "#fff" : colors.primary}
+                  />
+                  <Text style={[styles.toggleLabel, active && styles.toggleLabelActive]}>
+                    {s === "male" ? "Male" : "Female"}
+                  </Text>
                 </Pressable>
               );
             })}
           </View>
+
+          {/* Age */}
+          <SectionLabel label="AGE GROUP" colors={colors} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+            <View style={styles.chipRow}>
+              {AGE_GROUPS.map(age => {
+                const active = draft.age === age;
+                return (
+                  <Pressable
+                    key={age}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => update({ age })}
+                  >
+                    <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>
+                      {age}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          {/* Pregnancy / lactation */}
+          {showPregnancy && (
+            <>
+              <SectionLabel label="STATUS" colors={colors} />
+              <View style={styles.row}>
+                {([
+                  { key: "none" as PregnancyStatus,      label: "Not Pregnant" },
+                  { key: "pregnant" as PregnancyStatus,  label: "Pregnant"     },
+                  { key: "lactating" as PregnancyStatus, label: "Lactating"    },
+                ]).map(opt => {
+                  const active = draft.pregnancy === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      style={[styles.statusBtn, active && styles.statusBtnActive]}
+                      onPress={() => update({ pregnancy: opt.key })}
+                    >
+                      <Text style={[styles.statusLabel, active && styles.statusLabelActive]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {/* Preview */}
+          <View style={styles.preview}>
+            <MaterialIcons name="info-outline" size={14} color={colors.mutedForeground} />
+            <Text style={styles.previewText}>
+              DV based on:{" "}
+              <Text style={styles.previewBold}>{getProfileLabel(draft)}</Text>
+            </Text>
+          </View>
+
+          {/* Apply */}
+          <Pressable
+            style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.8 }]}
+            onPress={apply}
+          >
+            <Text style={styles.applyLabel}>Apply</Text>
+          </Pressable>
         </View>
       </Pressable>
     </Modal>
   );
 }
 
+function SectionLabel({ label, colors }: { label: string; colors: ReturnType<typeof useColors> }) {
+  return (
+    <Text style={{
+      fontSize: 11, fontFamily: "Inter_600SemiBold",
+      color: colors.mutedForeground, letterSpacing: 0.8,
+      marginTop: 14, marginBottom: 6,
+    }}>
+      {label}
+    </Text>
+  );
+}
+
 function makeStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     overlay: {
-      flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end",
+      flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end",
     },
     sheet: {
       backgroundColor: colors.card,
-      borderTopLeftRadius: 22, borderTopRightRadius: 22,
-      paddingTop: 12, paddingHorizontal: 20,
+      borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      paddingTop: 10, paddingHorizontal: 20,
     },
     handle: {
       width: 36, height: 4, borderRadius: 2,
-      backgroundColor: colors.border, alignSelf: "center", marginBottom: 12,
+      backgroundColor: colors.border, alignSelf: "center", marginBottom: 14,
     },
     title: {
       fontSize: 17, fontFamily: "Inter_700Bold",
@@ -113,34 +180,46 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
     subtitle: {
       fontSize: 12, fontFamily: "Inter_400Regular",
       color: colors.mutedForeground, textAlign: "center",
-      marginTop: 4, marginBottom: 14, lineHeight: 16,
+      marginTop: 4, lineHeight: 16,
     },
-    optionList: { gap: 10, paddingBottom: 6 },
-    option: {
-      flexDirection: "row", alignItems: "center", gap: 12,
-      padding: 14, borderRadius: 14,
-      borderWidth: 1.5, borderColor: colors.border,
-      backgroundColor: colors.background,
+    row: { flexDirection: "row", gap: 10 },
+    toggleBtn: {
+      flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+      gap: 6, paddingVertical: 10, borderRadius: 12,
+      borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.background,
     },
-    optionSelected: {
-      borderColor: colors.primary,
-      backgroundColor: colors.secondary,
+    toggleBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    toggleLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.primary },
+    toggleLabelActive: { color: "#fff" },
+    chipScroll: { marginHorizontal: -4 },
+    chipRow: { flexDirection: "row", gap: 8, paddingHorizontal: 4, paddingVertical: 2 },
+    chip: {
+      paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+      borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.background,
     },
-    optionPressed: { opacity: 0.7 },
-    iconWrap: {
-      width: 40, height: 40, borderRadius: 12,
-      backgroundColor: colors.secondary,
-      alignItems: "center", justifyContent: "center", flexShrink: 0,
+    chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    chipLabelActive: { color: "#fff" },
+    statusBtn: {
+      flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 12,
+      borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.background,
     },
-    iconWrapSelected: { backgroundColor: colors.primary },
-    optionText: { flex: 1, gap: 3 },
-    optionLabel: {
-      fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.foreground,
+    statusBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    statusLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    statusLabelActive: { color: "#fff" },
+    preview: {
+      flexDirection: "row", alignItems: "center", gap: 6,
+      backgroundColor: colors.muted, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 8, marginTop: 16,
     },
-    optionLabelSelected: { color: colors.primary },
-    optionDesc: {
-      fontSize: 11, fontFamily: "Inter_400Regular",
-      color: colors.mutedForeground, lineHeight: 15,
+    previewText: {
+      fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground,
     },
+    previewBold: { fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    applyBtn: {
+      backgroundColor: colors.primary, borderRadius: 14,
+      paddingVertical: 14, alignItems: "center", marginTop: 12,
+    },
+    applyLabel: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
   });
 }

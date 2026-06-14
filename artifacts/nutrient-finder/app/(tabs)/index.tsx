@@ -437,7 +437,7 @@ export default function HomeScreen() {
                   accessibilityLabel="Nutritional profile"
                 >
                   <MaterialIcons
-                    name={userProfile === "male" ? "person" : userProfile === "female" ? "person-outline" : "child-care"}
+                    name={userProfile.sex === "male" ? "person" : userProfile.pregnancy !== "none" ? "child-care" : "person-outline"}
                     size={20}
                     color="rgba(255,255,255,0.85)"
                   />
