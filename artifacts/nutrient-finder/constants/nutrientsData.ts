@@ -303,31 +303,34 @@ export const NUTRIENT_DATA: Record<string, NutrientInfo> = {
     ],
   },
   // DHA — 22:6 n-3 (Nutr_No 621)
+  // DB stores fatty acids in grams; DV is 0.5 g (= 500 mg) to match.
   "621": {
     roles: [
       { icon: "psychology", title: "Brain & Memory", description: "DHA makes up ~25% of the brain's fatty acids and is critical for memory, mood, and cognitive performance." },
       { icon: "visibility", title: "Eye Health", description: "A major structural fat in the retina — low DHA is linked to impaired vision and macular degeneration." },
       { icon: "favorite", title: "Heart & Inflammation", description: "Reduces triglycerides and resolves inflammation via specialized pro-resolving mediators." },
     ],
-    dailyValue: { dv: 500, unit: "mg", label: "500 mg (combined EPA+DHA)" },
+    dailyValue: { dv: 0.5, unit: "g", label: "500 mg (combined EPA+DHA)" },
   },
   // EPA — 20:5 n-3 (Nutr_No 629)
+  // DB stores fatty acids in grams; DV is 0.5 g (= 500 mg) to match.
   "629": {
     roles: [
       { icon: "favorite", title: "Cardiovascular Health", description: "EPA reduces triglycerides, lowers blood pressure, and decreases the risk of cardiac arrhythmia." },
       { icon: "auto-awesome", title: "Anti-inflammatory", description: "EPA is the precursor to anti-inflammatory eicosanoids that resolve chronic inflammation." },
       { icon: "psychology", title: "Mood & Mental Health", description: "Higher EPA levels are associated with lower rates of depression and anxiety." },
     ],
-    dailyValue: { dv: 500, unit: "mg", label: "500 mg (combined EPA+DHA)" },
+    dailyValue: { dv: 0.5, unit: "g", label: "500 mg (combined EPA+DHA)" },
   },
   // Alpha-Linolenic Acid — 18:3 n-3 c,c,c (Nutr_No 851)
+  // DB stores fatty acids in grams; DV is 1.6 g (= 1,600 mg) to match.
   "851": {
     roles: [
       { icon: "eco", title: "Essential Fatty Acid", description: "Alpha-Linolenic Acid is the plant-based omega-3 the body cannot make — it must come from food (flaxseed, chia, walnuts)." },
       { icon: "favorite", title: "Heart Health", description: "Associated with reduced cardiovascular disease risk, partly through conversion to EPA and DHA." },
       { icon: "auto-awesome", title: "Anti-inflammatory Precursor", description: "Alpha-Linolenic Acid converts (inefficiently) to EPA and DHA, providing the building blocks for anti-inflammatory pathways." },
     ],
-    dailyValue: { dv: 1600, unit: "mg", label: "1,600 mg" },
+    dailyValue: { dv: 1.6, unit: "g", label: "1,600 mg" },
   },
   "221": {
     roles: [
