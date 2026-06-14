@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "3Hwl5pG0cBNJLemcRsc3g"
 uri = "file://artifacts/nutrient-finder/assets/images/icon.png"
 type = "image"
 title = "nutrient finder green leaf icon"
+
+[[outputs]]
+id = "4F08RkAeh6YkGsvNyrA12"
+uri = "file://php-api-files.tar.gz"
+type = "unspecified"
+title = "PHP API Files (nutrients.php, search.php, food-detail.php)"
