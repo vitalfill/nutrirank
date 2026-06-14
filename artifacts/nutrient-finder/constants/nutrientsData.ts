@@ -320,12 +320,12 @@ export const NUTRIENT_DATA: Record<string, NutrientInfo> = {
     ],
     dailyValue: { dv: 500, unit: "mg", label: "500 mg (combined EPA+DHA)" },
   },
-  // ALA — 18:3 n-3 c,c,c (Nutr_No 851)
+  // Alpha-Linolenic Acid — 18:3 n-3 c,c,c (Nutr_No 851)
   "851": {
     roles: [
-      { icon: "eco", title: "Essential Fatty Acid", description: "ALA is the plant-based omega-3 the body cannot make — it must come from food (flaxseed, chia, walnuts)." },
+      { icon: "eco", title: "Essential Fatty Acid", description: "Alpha-Linolenic Acid is the plant-based omega-3 the body cannot make — it must come from food (flaxseed, chia, walnuts)." },
       { icon: "favorite", title: "Heart Health", description: "Associated with reduced cardiovascular disease risk, partly through conversion to EPA and DHA." },
-      { icon: "auto-awesome", title: "Anti-inflammatory Precursor", description: "ALA converts (inefficiently) to EPA and DHA, providing the building blocks for anti-inflammatory pathways." },
+      { icon: "auto-awesome", title: "Anti-inflammatory Precursor", description: "Alpha-Linolenic Acid converts (inefficiently) to EPA and DHA, providing the building blocks for anti-inflammatory pathways." },
     ],
     dailyValue: { dv: 1600, unit: "mg", label: "1,600 mg" },
   },

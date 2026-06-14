@@ -47,10 +47,10 @@ try {
     $RENAMES = [
         '22:6 n-3 (DHA)' => 'DHA (22:6 n-3)',
         '20:5 n-3 (EPA)'  => 'EPA (20:5 n-3)',
-        '18:3 n-3 c,c,c (ALA)' => 'ALA (18:3 n-3)',
+        '18:3 n-3 c,c,c (ALA)' => 'Alpha-Linolenic Acid (18:3 n-3)',
         '22:6 n-3'  => 'DHA',
         '20:5 n-3'  => 'EPA',
-        '18:3 n-3 c,c,c' => 'ALA',
+        '18:3 n-3 c,c,c' => 'Alpha-Linolenic Acid',
     ];
 
     $nutrients = [];

@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useState, useEffect } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { getNutrientInfo } from "@/constants/nutrientsData";
@@ -29,6 +29,11 @@ export default function NutrientInfoBox({ nutrient }: Props) {
   const colors = useColors();
   const info = getNutrientInfo(nutrient.Nutr_No);
   const interaction = getInteraction(nutrient.Nutr_No);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(false);
+  }, [nutrient.Nutr_No]);
 
   if (!info) return null;
 
@@ -36,36 +41,52 @@ export default function NutrientInfoBox({ nutrient }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <Pressable style={styles.header} onPress={() => setCollapsed(c => !c)}>
         <MaterialIcons name="info-outline" size={16} color={colors.accent} />
         <Text style={styles.headerText}>About {nutrient.NutrDesc}</Text>
-        {info.dailyValue && (
+        {info.dailyValue && !collapsed && (
           <View style={styles.dvBadge}>
             <Text style={styles.dvBadgeText}>DV: {info.dailyValue.label}</Text>
           </View>
         )}
-      </View>
+        <MaterialIcons
+          name={collapsed ? "expand-more" : "expand-less"}
+          size={20}
+          color={colors.mutedForeground}
+        />
+      </Pressable>
 
-      <View style={styles.rolesContainer}>
-        {info.roles.map((role, i) => (
-          <View key={i} style={styles.roleRow}>
-            <View style={styles.roleIconWrap}>
-              <MaterialIcons name={safeIcon(role.icon)} size={18} color={colors.primary} />
+      {!collapsed && (
+        <>
+          {info.dailyValue && (
+            <View style={styles.dvBadgeRow}>
+              <View style={styles.dvBadge}>
+                <Text style={styles.dvBadgeText}>DV: {info.dailyValue.label}</Text>
+              </View>
             </View>
-            <View style={styles.roleContent}>
-              <Text style={styles.roleTitle}>{role.title}</Text>
-              <Text style={styles.roleDesc}>{role.description}</Text>
-            </View>
+          )}
+
+          <View style={styles.rolesContainer}>
+            {info.roles.map((role, i) => (
+              <View key={i} style={styles.roleRow}>
+                <View style={styles.roleIconWrap}>
+                  <MaterialIcons name={safeIcon(role.icon)} size={18} color={colors.primary} />
+                </View>
+                <View style={styles.roleContent}>
+                  <Text style={styles.roleTitle}>{role.title}</Text>
+                  <Text style={styles.roleDesc}>{role.description}</Text>
+                </View>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
 
-      {/* Nutrient interaction note */}
-      {interaction && (
-        <View style={styles.interactionRow}>
-          <MaterialIcons name="link" size={14} color={colors.gold} />
-          <Text style={styles.interactionText}>{interaction}</Text>
-        </View>
+          {interaction && (
+            <View style={styles.interactionRow}>
+              <MaterialIcons name="link" size={14} color={colors.gold} />
+              <Text style={styles.interactionText}>{interaction}</Text>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -85,7 +106,6 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      flexWrap: "wrap",
     },
     headerText: {
       flex: 1,
@@ -95,6 +115,7 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       textTransform: "uppercase",
       letterSpacing: 0.5,
     },
+    dvBadgeRow: { alignItems: "flex-start" },
     dvBadge: {
       backgroundColor: colors.primary,
       borderRadius: 8,

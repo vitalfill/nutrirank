@@ -7,7 +7,7 @@ require_once __DIR__ . '/db.php';
 // Nutrient numbers that are always free (no subscription required).
 // This list is the authoritative server-side source of truth — the mobile client
 // mirrors it for UI purposes only.
-const FREE_NUTRIENT_NOS = ['208', '203', '204', '504', '301', '306', '320', '318', '430', '629', '257', '513'];
+const FREE_NUTRIENT_NOS = ['208', '203', '204', '504', '301', '306', '320', '318', '430', '629', '513', '511', '851', '431'];
 
 // Validate an entitlement session token issued by verify-entitlement.php.
 // The raw token is never stored; only its SHA-256 hash lives in the DB.

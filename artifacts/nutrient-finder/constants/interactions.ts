@@ -37,7 +37,7 @@ export const NUTRIENT_INTERACTIONS: Record<string, string> = {
   "606": "Balance saturated fat with omega-3s (EPA, DHA) to offset cardiovascular effects.",
   "621": "Vitamin E protects DHA from oxidation; pairs with EPA for full omega-3 benefit.",
   "629": "Works synergistically with DHA; Vitamin D enhances EPA's anti-inflammatory effects.",
-  "851": "ALA converts to EPA/DHA at low efficiency (~5%); eating preformed EPA/DHA is more effective.",
+  "851": "Alpha-Linolenic Acid converts to EPA/DHA at low efficiency (~5%); eating preformed EPA/DHA is more effective.",
 };
 
 export function getInteraction(nutrNo: string): string | null {

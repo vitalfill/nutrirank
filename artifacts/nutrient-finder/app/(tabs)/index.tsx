@@ -114,7 +114,7 @@ export default function HomeScreen() {
     queryFn: async () => {
       const res  = await fetch(`${API_BASE}/nutrients.php`);
       const data = await res.json();
-      const KEEP_NAMES = new Set(["DHA", "EPA", "ALA"]);
+      const KEEP_NAMES = new Set(["DHA", "EPA", "Alpha-Linolenic Acid"]);
       return (data.nutrients ?? []).filter((n: Nutrient) =>
         !(/^[0-9]/.test(n.NutrDesc)) || KEEP_NAMES.has(n.NutrDesc)
       );
