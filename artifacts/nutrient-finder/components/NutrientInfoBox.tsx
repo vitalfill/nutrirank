@@ -5,10 +5,12 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { getNutrientInfo } from "@/constants/nutrientsData";
 import { getInteraction } from "@/constants/interactions";
+import { getDV, formatDVLabel, UserProfile } from "@/constants/userProfile";
 import { Nutrient } from "@/types";
 
 interface Props {
   nutrient: Nutrient;
+  profile: UserProfile;
 }
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>["name"];
@@ -25,7 +27,7 @@ function safeIcon(name: string): MaterialIconName {
   return VALID_ICONS.includes(name as MaterialIconName) ? (name as MaterialIconName) : "info";
 }
 
-export default function NutrientInfoBox({ nutrient }: Props) {
+export default function NutrientInfoBox({ nutrient, profile }: Props) {
   const colors = useColors();
   const info = getNutrientInfo(nutrient.Nutr_No);
   const interaction = getInteraction(nutrient.Nutr_No);
@@ -37,6 +39,11 @@ export default function NutrientInfoBox({ nutrient }: Props) {
 
   if (!info) return null;
 
+  const dvNum = getDV(nutrient.Nutr_No, profile);
+  const dvLabel = dvNum !== null && info.dailyValue
+    ? formatDVLabel(nutrient.Nutr_No, dvNum, info.dailyValue.unit)
+    : (info.dailyValue?.label ?? null);
+
   const styles = makeStyles(colors);
 
   return (
@@ -44,9 +51,9 @@ export default function NutrientInfoBox({ nutrient }: Props) {
       <Pressable style={styles.header} onPress={() => setCollapsed(c => !c)}>
         <MaterialIcons name="info-outline" size={16} color={colors.accent} />
         <Text style={styles.headerText}>About {nutrient.NutrDesc}</Text>
-        {info.dailyValue && !collapsed && (
+        {dvLabel && !collapsed && (
           <View style={styles.dvBadge}>
-            <Text style={styles.dvBadgeText}>DV: {info.dailyValue.label}</Text>
+            <Text style={styles.dvBadgeText}>DV: {dvLabel}</Text>
           </View>
         )}
         <MaterialIcons
@@ -58,10 +65,10 @@ export default function NutrientInfoBox({ nutrient }: Props) {
 
       {!collapsed && (
         <>
-          {info.dailyValue && (
+          {dvLabel && (
             <View style={styles.dvBadgeRow}>
               <View style={styles.dvBadge}>
-                <Text style={styles.dvBadgeText}>DV: {info.dailyValue.label}</Text>
+                <Text style={styles.dvBadgeText}>DV: {dvLabel}</Text>
               </View>
             </View>
           )}

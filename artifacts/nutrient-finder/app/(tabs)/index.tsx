@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { API_BASE, FREE_NUTRIENT_NOS } from "@/constants/api";
 import { getNutrientInfo } from "@/constants/nutrientsData";
+import { getDV, loadProfile, saveProfile, UserProfile, DEFAULT_PROFILE } from "@/constants/userProfile";
 import DeficiencyQuizModal from "@/components/DeficiencyQuizModal";
 import FavoritesModal from "@/components/FavoritesModal";
 import FoodDetailModal from "@/components/FoodDetailModal";
@@ -26,6 +27,7 @@ import HowToUseModal from "@/components/HowToUseModal";
 import NutrientInfoBox from "@/components/NutrientInfoBox";
 import NutrientPickerModal from "@/components/NutrientPickerModal";
 import PaywallModal from "@/components/PaywallModal";
+import ProfilePickerModal from "@/components/ProfilePickerModal";
 import ResultCard from "@/components/ResultCard";
 import SearchHistory from "@/components/SearchHistory";
 import { useColors } from "@/hooks/useColors";
@@ -64,6 +66,10 @@ export default function HomeScreen() {
   const [showPaywall,     setShowPaywall]     = useState(false);
   const [pendingNutrient, setPendingNutrient] = useState<Nutrient | null>(null);
 
+  // ── profile ────────────────────────────────────────────────────────────────
+  const [userProfile,        setUserProfile]        = useState<UserProfile>(DEFAULT_PROFILE);
+  const [showProfilePicker,  setShowProfilePicker]  = useState(false);
+
   // ── modals ─────────────────────────────────────────────────────────────────
   const [showFavorites, setShowFavorites] = useState(false);
   const [showHowTo,     setShowHowTo]     = useState(false);
@@ -77,13 +83,14 @@ export default function HomeScreen() {
   const [favorites,      setFavorites]      = useState<Favorite[]>([]);
   const [searchHistory,  setSearchHistory]  = useState<Nutrient[]>([]);
 
-  // ── hydrate favorites + history ────────────────────────────────────────────
+  // ── hydrate favorites + history + profile ──────────────────────────────────
   useEffect(() => {
     AsyncStorage.multiGet([FAVORITES_KEY, HISTORY_KEY]).then(pairs => {
       const [favRaw, histRaw] = pairs.map(p => p[1]);
       try { if (favRaw)  setFavorites(JSON.parse(favRaw));     } catch {}
       try { if (histRaw) setSearchHistory(JSON.parse(histRaw));} catch {}
     });
+    loadProfile().then(setUserProfile);
   }, []);
 
   // ── unlock pending nutrient once subscription is confirmed ─────────────────
@@ -180,7 +187,7 @@ export default function HomeScreen() {
   });
 
   const nutrientInfo = selectedNutrient ? getNutrientInfo(selectedNutrient.Nutr_No) : null;
-  const dailyValue   = nutrientInfo?.dailyValue?.dv;
+  const dailyValue   = selectedNutrient ? getDV(selectedNutrient.Nutr_No, userProfile) : null;
 
   // ── nutrient selection ─────────────────────────────────────────────────────
   async function handleSelectNutrient(n: Nutrient) {
@@ -209,7 +216,7 @@ export default function HomeScreen() {
   async function handleShare() {
     if (!searchData || !debouncedNutrient) return;
     const foods = searchData.foods.slice(0, 10);
-    const dv = dailyValue;
+    const dv = debouncedNutrient ? getDV(debouncedNutrient.Nutr_No, userProfile) : null;
     const lines = foods.map((f, i) => {
       const val = f.Nutr_Val < 1 ? f.Nutr_Val.toFixed(3) : f.Nutr_Val.toFixed(1);
       const dvStr = dv ? ` (${Math.round((f.Nutr_Val / dv) * 100)}% DV)` : "";
@@ -283,12 +290,12 @@ export default function HomeScreen() {
       nutrientLabel={searchData?.nutrient.NutrDesc ?? ""}
       units={searchData?.nutrient.Units ?? ""}
       nutrNo={debouncedNutrient?.Nutr_No ?? ""}
-      dailyValue={dailyValue}
+      dailyValue={dailyValue ?? undefined}
       isFavorited={isFavorited(item.NDB_No)}
       onToggleFavorite={() => toggleFavorite(item)}
       onPressFood={(ndbNo, name) => { setDetailNdbNo(ndbNo); setDetailFoodName(name); }}
     />
-  ), [page, searchData, debouncedNutrient, dailyValue, favorites]);
+  ), [page, searchData, debouncedNutrient, dailyValue, favorites, userProfile]);
 
   const ListHeader = useCallback(() => (
     searchData ? (
@@ -426,6 +433,17 @@ export default function HomeScreen() {
               <View style={styles.headerActions}>
                 <Pressable
                   style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.7 }]}
+                  onPress={() => setShowProfilePicker(true)}
+                  accessibilityLabel="Nutritional profile"
+                >
+                  <MaterialIcons
+                    name={userProfile === "male" ? "person" : userProfile === "female" ? "person-outline" : "child-care"}
+                    size={20}
+                    color="rgba(255,255,255,0.85)"
+                  />
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.7 }]}
                   onPress={() => setShowQuiz(true)}
                   accessibilityLabel="Deficiency quiz"
                 >
@@ -482,7 +500,7 @@ export default function HomeScreen() {
             {/* Nutrient info box */}
             {selectedNutrient && (
               <View style={styles.sectionNoLabel}>
-                <NutrientInfoBox nutrient={selectedNutrient} />
+                <NutrientInfoBox nutrient={selectedNutrient} profile={userProfile} />
               </View>
             )}
 
@@ -543,7 +561,14 @@ export default function HomeScreen() {
       <FoodDetailModal
         ndbNo={detailNdbNo}
         foodName={detailFoodName}
+        profile={userProfile}
         onClose={() => setDetailNdbNo(null)}
+      />
+      <ProfilePickerModal
+        visible={showProfilePicker}
+        current={userProfile}
+        onSelect={async (p) => { setUserProfile(p); await saveProfile(p); }}
+        onClose={() => setShowProfilePicker(false)}
       />
     </View>
   );

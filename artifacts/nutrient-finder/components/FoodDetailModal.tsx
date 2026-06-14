@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { API_BASE } from "@/constants/api";
+import { DV_BY_PROFILE, UserProfile, DEFAULT_PROFILE, PROFILE_LABELS } from "@/constants/userProfile";
 import { useColors } from "@/hooks/useColors";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ interface ServingOption {
 interface Props {
   ndbNo: string | null;
   foodName: string;
+  profile?: UserProfile;
   onClose: () => void;
 }
 
@@ -84,16 +86,6 @@ const AMINO_ACID_NOS = new Set([
   "511","512","513","514","515","516","517","518","521",
 ]);
 
-/** FDA daily values used to compute % DV */
-const DV_MAP: Record<string, number> = {
-  "208": 2000, "203": 50,   "204": 78,   "205": 275,  "291": 28,
-  "269": 50,   "601": 300,  "606": 20,   "301": 1300, "303": 18,
-  "304": 420,  "305": 1250, "306": 4700, "307": 2300, "309": 11,
-  "312": 0.9,  "315": 2.3,  "317": 55,   "320": 900,  "318": 5000,
-  "323": 15,   "324": 20,   "328": 20,   "401": 90,   "404": 1.2,
-  "405": 1.3,  "406": 16,   "410": 5,    "415": 1.7,  "417": 400,
-  "435": 400,  "418": 2.4,  "421": 550,  "430": 120,
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -109,8 +101,8 @@ function formatVal(v: number): string {
   return v.toFixed(0);
 }
 
-function dvPercent(per100g: number, nutrNo: string, grams: number): number | null {
-  const dv = DV_MAP[nutrNo];
+function dvPercent(per100g: number, nutrNo: string, grams: number, profile: UserProfile): number | null {
+  const dv = DV_BY_PROFILE[profile][nutrNo];
   if (!dv) return null;
   const scaled = scaleVal(per100g, grams);
   return Math.round((scaled / dv) * 100);
@@ -144,10 +136,10 @@ function SectionHeader({ title, colors }: { title: string; colors: any }) {
 }
 
 function NutrientLine({
-  nutr, colors, indent = false, grams,
-}: { nutr: NutrientRow; colors: any; indent?: boolean; grams: number }) {
+  nutr, colors, indent = false, grams, profile,
+}: { nutr: NutrientRow; colors: any; indent?: boolean; grams: number; profile: UserProfile }) {
   const scaled = scaleVal(nutr.Nutr_Val, grams);
-  const dv     = dvPercent(nutr.Nutr_Val, nutr.Nutr_No, grams);
+  const dv     = dvPercent(nutr.Nutr_Val, nutr.Nutr_No, grams, profile);
 
   return (
     <View style={{
@@ -183,7 +175,7 @@ function NutrientLine({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
+export default function FoodDetailModal({ ndbNo, foodName, profile = DEFAULT_PROFILE, onClose }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
@@ -348,10 +340,9 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
                 <SectionHeader title="Macronutrients" colors={colors} />
                 {mainRows.map(n => (
                   <React.Fragment key={n.Nutr_No}>
-                    <NutrientLine nutr={n} colors={colors} grams={selectedGrams} />
-                    {/* Inject fat breakdown indented directly under Total Fat */}
+                    <NutrientLine nutr={n} colors={colors} grams={selectedGrams} profile={profile} />
                     {n.Nutr_No === "204" && fatSubRows.map(sub => (
-                      <NutrientLine key={sub.Nutr_No} nutr={sub} colors={colors} grams={selectedGrams} indent />
+                      <NutrientLine key={sub.Nutr_No} nutr={sub} colors={colors} grams={selectedGrams} indent profile={profile} />
                     ))}
                   </React.Fragment>
                 ))}
@@ -362,7 +353,7 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
               <>
                 <SectionHeader title="Minerals" colors={colors} />
                 {minerals.map(n => (
-                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} grams={selectedGrams} />
+                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} grams={selectedGrams} profile={profile} />
                 ))}
               </>
             )}
@@ -371,7 +362,7 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
               <>
                 <SectionHeader title="Vitamins" colors={colors} />
                 {vitamins.map(n => (
-                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} grams={selectedGrams} />
+                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} grams={selectedGrams} profile={profile} />
                 ))}
               </>
             )}
@@ -386,7 +377,7 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
                   />
                 </Pressable>
                 {expandFatty && fatty.map(n => (
-                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} indent grams={selectedGrams} />
+                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} indent grams={selectedGrams} profile={profile} />
                 ))}
               </>
             )}
@@ -401,7 +392,7 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
                   />
                 </Pressable>
                 {expandAmino && amino.map(n => (
-                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} indent grams={selectedGrams} />
+                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} indent grams={selectedGrams} profile={profile} />
                 ))}
               </>
             )}
@@ -410,13 +401,13 @@ export default function FoodDetailModal({ ndbNo, foodName, onClose }: Props) {
               <>
                 <SectionHeader title={`Other (${other.length})`} colors={colors} />
                 {other.map(n => (
-                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} grams={selectedGrams} />
+                  <NutrientLine key={n.Nutr_No} nutr={n} colors={colors} grams={selectedGrams} profile={profile} />
                 ))}
               </>
             )}
 
             <Text style={styles.footNote}>
-              * % Daily Values based on a 2,000 kcal diet.{"\n"}
+              * % Daily Values are personalised for {PROFILE_LABELS[profile]} per FDA Dietary Reference Intakes.{"\n"}
               Source: USDA Food Data Central via drgily.com.
             </Text>
             <Text style={styles.footNote}>© Vital Fill LLC 2026</Text>
