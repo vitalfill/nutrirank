@@ -16,7 +16,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.vitalfill.nutrirank",
-      "buildNumber": "2"
+      "buildNumber": "4",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.vitalfill.nutrirank",
@@ -42,6 +45,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4db363e7-2164-4b39-a44c-b8d6fcea97d5"
+      }
     }
   }
 }
