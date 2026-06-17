@@ -1,4 +1,4 @@
-export const API_BASE = "https://drgily.com/app-api";
+export const API_BASE = "https://api.drgily.com";
 
 export const FREE_PAGES_LIMIT = 2;
 
@@ -31,10 +31,20 @@ export const ALL_GROUP_CODES = [...PLANT_GROUP_CODES, ...ANIMAL_GROUP_CODES];
 // 430=Vitamin K, 629=EPA, 513=Alanine,
 // 511=Arginine, 851=Alpha-Linolenic Acid (ALA), 431=Folic acid
 export const FREE_NUTRIENT_NOS = new Set([
-  "208", "203", "204", "504",
-  "301", "306", "320", "318",
-  "430", "629",
-  "513", "511", "851", "431",
+  "208",
+  "203",
+  "204",
+  "504",
+  "301",
+  "306",
+  "320",
+  "318",
+  "430",
+  "629",
+  "513",
+  "511",
+  "851",
+  "431",
 ]);
 
 export const SUBSCRIPTION_PRICE = "$7.99 / year";

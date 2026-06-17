@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.vitalfill.nutrirank",
-      "buildNumber": "1"
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.vitalfill.nutrirank",
