@@ -55,6 +55,7 @@ export default function HomeScreen() {
   // ── nutrient + groups ──────────────────────────────────────────────────────
   const [selectedNutrient, setSelectedNutrient] = useState<Nutrient | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [infoBoxCollapsed, setInfoBoxCollapsed] = useState(false);
   const [page, setPage] = useState(1);
 
   const [debouncedNutrient, setDebouncedNutrient] = useState<Nutrient | null>(null);
@@ -103,6 +104,12 @@ export default function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }, [isSubscribed]);
+
+  // Reset info-box collapse only when the selected nutrient changes, not on
+  // food-group or filter changes.
+  useEffect(() => {
+    setInfoBoxCollapsed(false);
+  }, [selectedNutrient?.Nutr_No]);
 
   // ── debounce ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -500,7 +507,12 @@ export default function HomeScreen() {
             {/* Nutrient info box */}
             {selectedNutrient && (
               <View style={styles.sectionNoLabel}>
-                <NutrientInfoBox nutrient={selectedNutrient} profile={userProfile} />
+                <NutrientInfoBox
+                  nutrient={selectedNutrient}
+                  profile={userProfile}
+                  collapsed={infoBoxCollapsed}
+                  onToggleCollapsed={() => setInfoBoxCollapsed(c => !c)}
+                />
               </View>
             )}
 
