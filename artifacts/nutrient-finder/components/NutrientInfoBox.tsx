@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
@@ -11,6 +11,8 @@ import { Nutrient } from "@/types";
 interface Props {
   nutrient: Nutrient;
   profile: UserProfile;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>["name"];
@@ -27,15 +29,10 @@ function safeIcon(name: string): MaterialIconName {
   return VALID_ICONS.includes(name as MaterialIconName) ? (name as MaterialIconName) : "info";
 }
 
-export default function NutrientInfoBox({ nutrient, profile }: Props) {
+export default function NutrientInfoBox({ nutrient, profile, collapsed, onToggleCollapsed }: Props) {
   const colors = useColors();
   const info = getNutrientInfo(nutrient.Nutr_No);
   const interaction = getInteraction(nutrient.Nutr_No);
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    setCollapsed(false);
-  }, [nutrient.Nutr_No]);
 
   if (!info) return null;
 
@@ -48,7 +45,7 @@ export default function NutrientInfoBox({ nutrient, profile }: Props) {
 
   return (
     <View style={styles.container}>
-      <Pressable style={styles.header} onPress={() => setCollapsed(c => !c)}>
+      <Pressable style={styles.header} onPress={onToggleCollapsed}>
         <MaterialIcons name="info-outline" size={16} color={colors.accent} />
         <Text style={styles.headerText}>About {nutrient.NutrDesc}</Text>
         {dvLabel && !collapsed && (
