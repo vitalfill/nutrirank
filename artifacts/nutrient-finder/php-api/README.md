@@ -15,7 +15,6 @@ Upload the contents of this folder to your server at `https://drgily.com/app-api
 | `register-subscription.php` | Claims a webhook-verified credential (or RC-verified fallback) for a device |
 | `verify-entitlement.php` | Issues a short-lived session token given a registered device credential |
 | `search.php` | Runs the nutrient/food-group search with pagination |
-| `register-email.php` | Legacy email unlock (kept for backward compat) |
 | `create-checkout.php` | Creates a Stripe Checkout session → returns URL; also issues a verify token |
 | `check-subscription.php` | Verifies subscription using an email-bound one-time verify token |
 | `subscribe-success.php` | Stripe redirect page — surfaces the verify token for the app to capture |
