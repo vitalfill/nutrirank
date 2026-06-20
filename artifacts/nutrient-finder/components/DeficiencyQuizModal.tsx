@@ -195,7 +195,7 @@ export default function DeficiencyQuizModal({ visible, nutrients, onSelectNutrie
             <View style={styles.disclaimer}>
               <MaterialIcons name="info-outline" size={14} color={colors.mutedForeground} />
               <Text style={styles.disclaimerText}>
-                This quiz is for educational purposes only and does not constitute medical advice.
+                This quiz is for educational purposes only and does not constitute medical advice. Consult a healthcare professional before making dietary changes.
               </Text>
             </View>
 
