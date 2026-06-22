@@ -21,6 +21,8 @@ export interface FoodResult {
   Long_Desc: string;
   FdGrp_Cd: string;
   Nutr_Val: number;
+  /** Nutrient amount in the primary household serving: (Nutr_Val/100) × primary_Gm_Wgt */
+  serve_val: number;
   weights: FoodWeight[];
 }
 
