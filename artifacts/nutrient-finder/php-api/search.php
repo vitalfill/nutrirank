@@ -101,13 +101,27 @@ try {
     $page        = min($page, $total_pages);
 
     // --- Foods page ---
+    // Rank by nutrient amount in the primary household serving:
+    //   serve_val = (Nutr_Val / 100) × primary_Gm_Wgt
+    // Foods without a WEIGHT entry fall back to 100 g (i.e. serve_val = Nutr_Val).
     $fStmt = $db->prepare("
-        SELECT f.NDB_No, f.Long_Desc, f.FdGrp_Cd, d.Nutr_Val
+        SELECT f.NDB_No, f.Long_Desc, f.FdGrp_Cd, d.Nutr_Val,
+               COALESCE(pw.Gm_Wgt, 100)                           AS primary_gm_wgt,
+               (d.Nutr_Val / 100) * COALESCE(pw.Gm_Wgt, 100)     AS serve_val
         FROM FOOD_DES f
         JOIN NUT_DATA d ON f.NDB_No = d.NDB_No
+        LEFT JOIN (
+            SELECT w1.NDB_No, w1.Gm_Wgt
+            FROM WEIGHT w1
+            JOIN (
+                SELECT NDB_No, MIN(Seq) AS min_seq
+                FROM WEIGHT
+                GROUP BY NDB_No
+            ) wmin ON w1.NDB_No = wmin.NDB_No AND w1.Seq = wmin.min_seq
+        ) pw ON f.NDB_No = pw.NDB_No
         WHERE d.Nutr_No = ?
           AND f.FdGrp_Cd IN ($groupPh)
-        ORDER BY d.Nutr_Val DESC
+        ORDER BY serve_val DESC
         LIMIT $limit OFFSET $offset
     ");
     $fStmt->execute(array_merge([$nutr_no], $food_groups));
@@ -145,6 +159,7 @@ try {
             'Long_Desc'=> $f['Long_Desc'],
             'FdGrp_Cd' => $f['FdGrp_Cd'],
             'Nutr_Val' => (float)$f['Nutr_Val'],
+            'serve_val'=> round((float)$f['serve_val'], 4),
             'weights'  => $weights[$f['NDB_No']] ?? [],
         ];
     }, $foods);
