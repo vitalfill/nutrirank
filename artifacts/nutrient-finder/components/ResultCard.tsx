@@ -35,9 +35,10 @@ export default function ResultCard({
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
 
-  const defaultGrams = item.FdGrp_Cd === "1200" && item.weights.find(w => /oz/i.test(w.Msre_Desc))
-    ? (item.weights.find(w => /oz/i.test(w.Msre_Desc))!.Gm_Wgt)
-    : 100;
+  // Default to the primary household serving (first weight entry) so the
+  // displayed value matches the serving-based ranking.  Falls back to 100 g
+  // when no weight data is available.
+  const defaultGrams = item.weights.length > 0 ? item.weights[0].Gm_Wgt : 100;
 
   const allWeights: FoodWeight[] = [
     { Amount: 100, Msre_Desc: "g", Gm_Wgt: 100 },
