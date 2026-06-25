@@ -14,9 +14,8 @@ const FREE_NUTRIENT_NOS = ['208', '203', '204', '504', '301', '306', '320', '318
 // Fails closed on any error (DB down, malformed token, expired, not found).
 function verify_entitlement_token(string $token): bool {
     if (strlen($token) !== 64 || !ctype_xdigit($token)) {
-        return false; // Fast-reject clearly invalid tokens before hitting the DB
+        return false;
     }
-
     try {
         $db         = get_db();
         $token_hash = hash('sha256', $token);
@@ -28,7 +27,7 @@ function verify_entitlement_token(string $token): bool {
         $stmt->execute([$token_hash]);
         return $stmt->fetchColumn() !== false;
     } catch (Exception $e) {
-        return false; // DB error → fail closed, never grant access
+        return false;
     }
 }
 
@@ -44,7 +43,7 @@ $nutr_no    = isset($input['nutrient_no']) ? trim($input['nutrient_no']) : '';
 $food_groups = isset($input['food_groups']) && is_array($input['food_groups'])
     ? array_map('trim', $input['food_groups'])
     : [];
-$page       = max(1, (int)($input['page'] ?? 1));
+$page = max(1, (int)($input['page'] ?? 1));
 
 if (!$nutr_no || empty($food_groups)) {
     http_response_code(400);
@@ -53,10 +52,8 @@ if (!$nutr_no || empty($food_groups)) {
 }
 
 // --- Server-side entitlement enforcement ---
-// Premium nutrients require a valid short-lived session token issued by verify-entitlement.php.
 if (!in_array($nutr_no, FREE_NUTRIENT_NOS, true)) {
     $rc_entitlement_token = isset($input['rc_entitlement_token']) ? trim($input['rc_entitlement_token']) : '';
-
     if (empty($rc_entitlement_token) || !verify_entitlement_token($rc_entitlement_token)) {
         http_response_code(403);
         echo json_encode(['error' => 'Subscription required']);
@@ -65,97 +62,150 @@ if (!in_array($nutr_no, FREE_NUTRIENT_NOS, true)) {
 }
 
 // ---------------------------------------------------------------------------
-// Returns true if the Msre_Desc string identifies this as the NLEA/label serving.
+// NLEA detection: true when Msre_Desc identifies this as the labeled serving.
 // ---------------------------------------------------------------------------
 function is_nlea_serving(string $desc): bool {
     return (bool) preg_match('/\bnlea\b|^(1\s+)?serving$/i', trim($desc));
 }
 
 // ---------------------------------------------------------------------------
-// Choose the best single serving for a food given its weight options and group.
-//
-// Priority:
-//   1. NLEA serving (Msre_Desc matches NLEA pattern)
-//   2. Nuts & seeds (FdGrp_Cd 1200) → 1 oz (28.35 g), synthesised if absent
-//   3. Most-realistic heuristic: household measure in 15–250 g, closest to 100 g
-//   4. Returns null → caller falls back to 100 g and sets is_fallback = true
-//
-// Returns [$chosen_weight_or_null, $weights_array]
-// $weights_array may have a synthetic entry prepended (nuts case only).
+// STEP A — Compute RACC target (grams) for a food.
+// Keyword overrides (first hit wins) take precedence over the group default.
 // ---------------------------------------------------------------------------
-function select_serving(array $weights, string $fd_grp_cd): array {
+function get_racc_target(string $fd_grp_cd, string $long_desc): float {
+    $d = strtolower($long_desc);
+
+    // Keyword overrides — evaluated in spec-specified order; first match returns.
+    if (preg_match('/spice|herb|\bleaves,\s*dried\b/', $d))                          return 2.0;
+    if (str_contains($d, 'bacon'))                                                    return 15.0;
+    if ($fd_grp_cd === '0100' && str_contains($d, 'egg'))                             return 50.0;
+    if (str_contains($d, 'cottage cheese'))                                           return 110.0;
+    if (str_contains($d, 'cheese'))                                                   return 30.0;
+    if (str_contains($d, 'yogurt'))                                                   return 170.0;
+    if (preg_match('/sour cream|cream cheese/', $d))                                  return 30.0;
+    if (preg_match('/milk|buttermilk/', $d) && !preg_match('/dry|dried|powder/', $d)) return 240.0;
+    if (preg_match('/dry|dried|powder/', $d) && preg_match('/\b(milk|whey)\b/', $d)) return 30.0;
+    if (preg_match('/nut butter|seed butter|peanut butter/', $d))                     return 32.0;
+    if (preg_match('/juice|nectar/', $d))                                             return 240.0;
+    if ($fd_grp_cd === '0900' && str_contains($d, 'dried'))                           return 40.0;
+    if (preg_match('/\boil\b|\bbutter\b|margarine|lard/', $d))                        return 14.0;
+    if (str_contains($d, 'soup'))                                                     return 245.0;
+    if (preg_match('/sauce|gravy/', $d))                                              return 60.0;
+    if (preg_match('/syrup|honey|\bjam\b|\bjelly\b|preserves/', $d))                  return 21.0;
+    if ($fd_grp_cd === '1900' && str_contains($d, 'sugar'))                           return 4.0;
+    if (preg_match('/chocolate|cand(y|ies)/', $d))                                    return 40.0;
+    if (preg_match('/flour|\bmeal\b|cornmeal/', $d))                                  return 30.0;
+    if ($fd_grp_cd === '2000' && str_contains($d, 'cooked'))                          return 140.0;
+    if (str_contains($d, 'bread'))                                                    return 50.0;
+    if (preg_match('/bagel|muffin|biscuit/', $d))                                     return 110.0;
+    if (preg_match('/cookie|cracker/', $d))                                           return 30.0;
+    if (preg_match('/\bcake\b|\bpie\b/', $d))                                         return 100.0;
+    if (preg_match('/lettuce|spinach, raw|greens, raw/', $d))                         return 85.0;
+    if (str_contains($d, 'tofu'))                                                     return 85.0;
+
+    // Group defaults
+    static $defaults = [
+        '0100' => 30,  '0200' => 2,   '0300' => 60,  '0400' => 14,  '0500' => 85,
+        '0600' => 120, '0700' => 55,  '0800' => 40,  '0900' => 140, '1000' => 85,
+        '1100' => 85,  '1200' => 30,  '1300' => 85,  '1400' => 240, '1500' => 85,
+        '1600' => 90,  '1700' => 85,  '1800' => 55,  '1900' => 40,  '2000' => 50,
+        '2100' => 140, '2200' => 140, '2500' => 30,  '3500' => 140, '3600' => 140,
+    ];
+    return (float)($defaults[$fd_grp_cd] ?? 55);
+}
+
+// ---------------------------------------------------------------------------
+// STEP B — Snap to the closest available weight within the acceptance band.
+// Returns ['chosen' => $weight_or_null, 'in_band' => bool].
+// ---------------------------------------------------------------------------
+function snap_to_weight(array $weights, float $target): array {
+    if (empty($weights)) return ['chosen' => null, 'in_band' => false];
+
+    // Drop bulk-container descriptors unless that leaves nothing.
+    $bulk_re = '/package|carton|bottle|\bcan\b|container|\bjar\b|\blb\b|pound|\bkg\b|quart|gallon|\bbulk\b/i';
+    $filtered = array_values(array_filter($weights, fn($w) => !preg_match($bulk_re, $w['Msre_Desc'])));
+    if (empty($filtered)) $filtered = array_values($weights);
+
+    // Only positive gram weights.
+    $candidates = array_values(array_filter($filtered, fn($w) => $w['Gm_Wgt'] > 0));
+    if (empty($candidates)) return ['chosen' => null, 'in_band' => false];
+
+    $hh_re = '/\boz\b|slice|piece|\bcup\b|\beach\b|medium|large|\btbsp\b/i';
+
+    // Sort by: Δ from target ASC → household preferred → Amount closest to 1 → smaller Gm_Wgt → first.
+    usort($candidates, function ($a, $b) use ($target, $hh_re) {
+        $da = abs($a['Gm_Wgt'] - $target);
+        $db = abs($b['Gm_Wgt'] - $target);
+        if ($da !== $db) return $da <=> $db;
+        $ha = (int)(bool) preg_match($hh_re, $a['Msre_Desc']);
+        $hb = (int)(bool) preg_match($hh_re, $b['Msre_Desc']);
+        if ($ha !== $hb) return $hb - $ha;
+        $aa = abs($a['Amount'] - 1);
+        $ab = abs($b['Amount'] - 1);
+        if ($aa !== $ab) return $aa <=> $ab;
+        return $a['Gm_Wgt'] <=> $b['Gm_Wgt'];
+    });
+
+    $chosen  = $candidates[0];
+    $in_band = ($chosen['Gm_Wgt'] >= $target * 0.5 && $chosen['Gm_Wgt'] <= $target * 2.0);
+
+    return ['chosen' => $chosen, 'in_band' => $in_band];
+}
+
+// ---------------------------------------------------------------------------
+// Main serving-selection entry point.
+// Priority: 1. NLEA weight  2. RACC snap  3. RACC target direct (is_fallback).
+//
+// Returns a flat array with all fields needed for the food result, including
+// a possibly-modified $weights array (synthetic entry prepended for fallback).
+// ---------------------------------------------------------------------------
+function select_serving(array $weights, string $fd_grp_cd, string $long_desc): array {
 
     // 1. NLEA serving
     foreach ($weights as $w) {
         if (!empty($w['is_nlea'])) {
-            return [$w, $weights];
+            return [
+                'chosen_gm_wgt'    => (float)$w['Gm_Wgt'],
+                'chosen_msre_desc' => (string)$w['Msre_Desc'],
+                'chosen_amount'    => (float)$w['Amount'],
+                'racc_target_g'    => null,
+                'is_nlea'          => true,
+                'is_fallback'      => false,
+                'weights'          => $weights,
+            ];
         }
     }
 
-    // 2. Nuts & seeds → 1 oz
-    if ($fd_grp_cd === '1200') {
-        // Prefer existing entry near 28.35 g
-        foreach ($weights as $w) {
-            if (preg_match('/\b(oz|ounce)\b/i', $w['Msre_Desc']) && abs($w['Gm_Wgt'] - 28.35) < 5) {
-                return [$w, $weights];
-            }
-        }
-        // Any oz entry
-        foreach ($weights as $w) {
-            if (preg_match('/\b(oz|ounce)\b/i', $w['Msre_Desc'])) {
-                return [$w, $weights];
-            }
-        }
-        // Synthesise
-        $syn = ['Amount' => 1.0, 'Msre_Desc' => '1 oz', 'Gm_Wgt' => 28.35, 'is_nlea' => false];
-        array_unshift($weights, $syn);
-        return [$syn, $weights];
+    // 2. RACC snap
+    $racc = get_racc_target($fd_grp_cd, $long_desc);
+    $snap = snap_to_weight($weights, $racc);
+
+    if ($snap['chosen'] !== null && $snap['in_band']) {
+        $w = $snap['chosen'];
+        return [
+            'chosen_gm_wgt'    => (float)$w['Gm_Wgt'],
+            'chosen_msre_desc' => (string)$w['Msre_Desc'],
+            'chosen_amount'    => (float)$w['Amount'],
+            'racc_target_g'    => $racc,
+            'is_nlea'          => false,
+            'is_fallback'      => false,
+            'weights'          => $weights,
+        ];
     }
 
-    // 3. Most-realistic serving heuristic
-    $household_re = '/\b(cup|piece|slice|oz|ounce|tbsp|tsp|tablespoon|teaspoon|fl\s+oz|fluid\s+oz|serving|portion|item|unit|medium|large|small|fillet|steak|chop|breast|thigh|wing|leg|can|bottle|package|pkg|bar|patty|link|strip|nugget)\b/i';
+    // 3. RACC target direct — synthesise a weight entry so the picker matches.
+    $syn_desc = ((int)round($racc)) . ' g (typical serving)';
+    $syn      = ['Amount' => 1.0, 'Msre_Desc' => $syn_desc, 'Gm_Wgt' => (float)$racc, 'is_nlea' => false];
 
-    // Build candidates with gram weights in [15, 250]
-    $candidates = [];
-    foreach ($weights as $w) {
-        if ($w['Gm_Wgt'] >= 15 && $w['Gm_Wgt'] <= 250) {
-            $candidates[] = array_merge($w, ['_hh' => (int)(bool) preg_match($household_re, $w['Msre_Desc'])]);
-        }
-    }
-
-    // Widen range if nothing in range
-    if (empty($candidates)) {
-        foreach ($weights as $w) {
-            if ($w['Gm_Wgt'] >= 5 && $w['Gm_Wgt'] <= 500) {
-                $candidates[] = array_merge($w, ['_hh' => (int)(bool) preg_match($household_re, $w['Msre_Desc'])]);
-            }
-        }
-    }
-
-    // Accept any positive weight as last resort before true fallback
-    if (empty($candidates)) {
-        foreach ($weights as $w) {
-            if ($w['Gm_Wgt'] > 0) {
-                $candidates[] = array_merge($w, ['_hh' => 0]);
-            }
-        }
-    }
-
-    if (empty($candidates)) {
-        return [null, $weights];
-    }
-
-    // Sort: prefer household measures, then closest to 100 g (deterministic)
-    usort($candidates, function ($a, $b) {
-        if ($a['_hh'] !== $b['_hh']) {
-            return $b['_hh'] - $a['_hh'];
-        }
-        return abs($a['Gm_Wgt'] - 100) - abs($b['Gm_Wgt'] - 100);
-    });
-
-    $chosen = $candidates[0];
-    unset($chosen['_hh']);
-    return [$chosen, $weights];
+    return [
+        'chosen_gm_wgt'    => (float)$racc,
+        'chosen_msre_desc' => $syn_desc,
+        'chosen_amount'    => 1.0,
+        'racc_target_g'    => $racc,
+        'is_nlea'          => false,
+        'is_fallback'      => true,
+        'weights'          => array_merge([$syn], $weights), // prepend so picker finds it first
+    ];
 }
 
 try {
@@ -176,9 +226,9 @@ try {
     }
 
     // --- Fetch ALL foods + ALL their weights in one query (no LIMIT) ---
-    // Ranking must happen in PHP so the serving-selection heuristic determines sort order.
-    // MySQL filters by nutrient + food groups; PHP groups, applies heuristic, sorts, paginates.
-    $params = array_merge([$nutr_no], $food_groups);
+    // Ranking happens in PHP so the serving-selection heuristic can determine sort order
+    // correctly before pagination is applied.
+    $params  = array_merge([$nutr_no], $food_groups);
     $allStmt = $db->prepare("
         SELECT f.NDB_No, f.Long_Desc, f.FdGrp_Cd, d.Nutr_Val,
                w.Amount    AS w_Amount,
@@ -193,7 +243,7 @@ try {
     ");
     $allStmt->execute($params);
 
-    // --- Group rows by food, annotating each weight with is_nlea ---
+    // --- Group rows by food; annotate each weight with is_nlea ---
     $foods = [];
     while ($row = $allStmt->fetch()) {
         $ndb = $row['NDB_No'];
@@ -216,34 +266,31 @@ try {
         }
     }
 
-    // --- Apply serving selection + compute serve_val per food ---
+    // --- Apply RACC-based serving selection + compute serve_val ---
     foreach ($foods as &$food) {
-        [$chosen, $food['weights']] = select_serving($food['weights'], $food['FdGrp_Cd']);
+        $sel = select_serving($food['weights'], $food['FdGrp_Cd'], $food['Long_Desc']);
 
-        if ($chosen !== null) {
-            $food['chosen_gm_wgt'] = (float)$chosen['Gm_Wgt'];
-            $food['is_fallback']   = false;
-        } else {
-            $food['chosen_gm_wgt'] = 100.0;
-            $food['is_fallback']   = true;
-        }
-
-        $food['serve_val'] = round(($food['Nutr_Val'] / 100) * $food['chosen_gm_wgt'], 4);
+        $food['chosen_gm_wgt']    = $sel['chosen_gm_wgt'];
+        $food['chosen_msre_desc'] = $sel['chosen_msre_desc'];
+        $food['chosen_amount']    = $sel['chosen_amount'];
+        $food['racc_target_g']    = $sel['racc_target_g'];
+        $food['is_nlea']          = $sel['is_nlea'];
+        $food['is_fallback']      = $sel['is_fallback'];
+        $food['weights']          = $sel['weights'];
+        $food['serve_val']        = round(($food['Nutr_Val'] / 100) * $food['chosen_gm_wgt'], 4);
     }
     unset($food);
 
-    // --- Sort descending by serve_val, then by Nutr_Val for ties (deterministic) ---
+    // --- Sort descending by serve_val; break ties by Nutr_Val (deterministic) ---
     $foods = array_values($foods);
     usort($foods, function ($a, $b) {
-        if ($b['serve_val'] !== $a['serve_val']) {
-            return $b['serve_val'] <=> $a['serve_val'];
-        }
-        return $b['Nutr_Val'] <=> $a['Nutr_Val'];
+        if ($b['serve_val'] !== $a['serve_val']) return $b['serve_val'] <=> $a['serve_val'];
+        return $b['Nutr_Val']  <=> $a['Nutr_Val'];
     });
 
     // --- Paginate ---
     $total       = count($foods);
-    $total_pages = max(1, (int)ceil($total / $limit));
+    $total_pages = max(1, (int) ceil($total / $limit));
     $page        = min($page, $total_pages);
     $offset      = ($page - 1) * $limit;
     $page_foods  = array_slice($foods, $offset, $limit);
