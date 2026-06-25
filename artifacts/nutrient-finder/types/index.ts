@@ -27,7 +27,15 @@ export interface FoodResult {
   serve_val: number;
   /** Gram weight of the server-chosen serving (drives the default in the picker) */
   chosen_gm_wgt: number;
-  /** True when no usable weight data existed — value is per 100 g */
+  /** Human-readable description of the chosen serving */
+  chosen_msre_desc: string;
+  /** Numeric amount for the chosen serving */
+  chosen_amount: number;
+  /** RACC target used to snap to the serving (null when NLEA was used) */
+  racc_target_g: number | null;
+  /** True when the chosen serving is the NLEA/labeled serving */
+  is_nlea: boolean;
+  /** True when no household weight was close enough — value is per RACC target grams */
   is_fallback: boolean;
   weights: FoodWeight[];
 }
