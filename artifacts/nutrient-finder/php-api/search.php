@@ -122,7 +122,9 @@ function snap_to_weight(array $weights, float $target): array {
     if (empty($weights)) return ['chosen' => null, 'in_band' => false];
 
     // Drop bulk-container descriptors unless that leaves nothing.
-    $bulk_re = '/package|carton|bottle|\bcan\b|container|\bjar\b|\blb\b|pound|\bkg\b|quart|gallon|\bbulk\b/i';
+    // "container" is intentionally excluded here: single-serve containers such as
+    // "container (6 oz)" are valid household measures and must not be filtered out.
+    $bulk_re = '/package|carton|bottle|\bcan\b|\bjar\b|\blb\b|pound|\bkg\b|quart|gallon|\bbulk\b/i';
     $filtered = array_values(array_filter($weights, fn($w) => !preg_match($bulk_re, $w['Msre_Desc'])));
     if (empty($filtered)) $filtered = array_values($weights);
 
@@ -132,22 +134,22 @@ function snap_to_weight(array $weights, float $target): array {
 
     $hh_re = '/\boz\b|slice|piece|\bcup\b|\beach\b|medium|large|\btbsp\b/i';
 
-    // Sort by: Δ from target ASC → household preferred → Amount closest to 1 → smaller Gm_Wgt → first.
+    // Sort by: Δ from target ASC (spaceship on floats) → household preferred →
+    //          Amount closest to 1 → smaller Gm_Wgt → first in list.
     usort($candidates, function ($a, $b) use ($target, $hh_re) {
-        $da = abs($a['Gm_Wgt'] - $target);
-        $db = abs($b['Gm_Wgt'] - $target);
-        if ($da !== $db) return $da <=> $db;
+        $cmp = abs($a['Gm_Wgt'] - $target) <=> abs($b['Gm_Wgt'] - $target);
+        if ($cmp !== 0) return $cmp;
         $ha = (int)(bool) preg_match($hh_re, $a['Msre_Desc']);
         $hb = (int)(bool) preg_match($hh_re, $b['Msre_Desc']);
         if ($ha !== $hb) return $hb - $ha;
-        $aa = abs($a['Amount'] - 1);
-        $ab = abs($b['Amount'] - 1);
-        if ($aa !== $ab) return $aa <=> $ab;
+        $cmp2 = abs($a['Amount'] - 1) <=> abs($b['Amount'] - 1);
+        if ($cmp2 !== 0) return $cmp2;
         return $a['Gm_Wgt'] <=> $b['Gm_Wgt'];
     });
 
     $chosen  = $candidates[0];
-    $in_band = ($chosen['Gm_Wgt'] >= $target * 0.5 && $chosen['Gm_Wgt'] <= $target * 2.0);
+    // Tightened acceptance band: 0.65×–1.5× of target.
+    $in_band = ($chosen['Gm_Wgt'] >= $target * 0.65 && $chosen['Gm_Wgt'] <= $target * 1.5);
 
     return ['chosen' => $chosen, 'in_band' => $in_band];
 }
