@@ -52,9 +52,17 @@ export default function ResultCard({
   const dvWidth = dvPercent !== null ? Math.min(dvPercent, 100) : 0;
 
   const selectedWeight = allWeights.find(w => w.Gm_Wgt === selectedGrams) ?? allWeights[0];
-  const servingLabel = selectedWeight.Gm_Wgt === 100 && selectedWeight.Msre_Desc === "g"
-    ? "100 g"
-    : `${selectedWeight.Amount % 1 === 0 ? selectedWeight.Amount.toFixed(0) : selectedWeight.Amount.toFixed(1)} ${selectedWeight.Msre_Desc}`;
+
+  function formatServingLabel(w: FoodWeight): string {
+    if (w.Gm_Wgt === 100 && w.Msre_Desc === "g") return "100 g";
+    // Synthetic fallback entries already embed the gram amount in their description
+    // (e.g. "55 g (typical serving)") — don't prepend Amount again.
+    if (w.Msre_Desc.includes("(typical serving)")) return w.Msre_Desc;
+    const amt = w.Amount % 1 === 0 ? w.Amount.toFixed(0) : w.Amount.toFixed(1);
+    return `${amt} ${w.Msre_Desc}`;
+  }
+
+  const servingLabel = formatServingLabel(selectedWeight);
 
   function handleFavorite() {
     Haptics.impactAsync(isFavorited ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
@@ -62,9 +70,7 @@ export default function ResultCard({
   }
 
   const renderWeightOption = useCallback(({ item: w }: { item: FoodWeight }) => {
-    const label = w.Gm_Wgt === 100 && w.Msre_Desc === "g"
-      ? "100 g"
-      : `${w.Amount % 1 === 0 ? w.Amount.toFixed(0) : w.Amount.toFixed(1)} ${w.Msre_Desc}`;
+    const label = formatServingLabel(w);
     const isSelected = w.Gm_Wgt === selectedGrams;
     return (
       <Pressable
