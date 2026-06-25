@@ -35,10 +35,9 @@ export default function ResultCard({
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
 
-  // Default to the primary household serving (first weight entry) so the
-  // displayed value matches the serving-based ranking.  Falls back to 100 g
-  // when no weight data is available.
-  const defaultGrams = item.weights.length > 0 ? item.weights[0].Gm_Wgt : 100;
+  // Use the server-chosen serving so the displayed value matches the ranking.
+  // is_fallback foods have chosen_gm_wgt = 100, which selects the "100 g" option.
+  const defaultGrams = item.chosen_gm_wgt ?? (item.weights.length > 0 ? item.weights[0].Gm_Wgt : 100);
 
   const allWeights: FoodWeight[] = [
     { Amount: 100, Msre_Desc: "g", Gm_Wgt: 100 },
