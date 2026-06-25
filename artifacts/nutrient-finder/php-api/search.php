@@ -75,6 +75,17 @@ function is_nlea_serving(string $desc): bool {
 function get_racc_target(string $fd_grp_cd, string $long_desc): float {
     $d = strtolower($long_desc);
 
+    // Ingredient-type foods used in tiny amounts — checked first so they don't
+    // fall through to a meal-sized group default.
+    if (preg_match('/baking powder|baking soda|\bleavening\b/', $d))                 return 3.0;
+    if (str_contains($d, 'yeast') && !str_contains($d, 'extract'))                   return 3.0;
+    if (preg_match('/\bsalt\b/', $d) && !str_contains($d, 'salted'))                 return 1.0;
+    if (preg_match('/cornstarch|\bstarch\b/', $d))                                    return 8.0;
+    if (str_contains($d, 'gelatin'))                                                  return 7.0;
+    if (str_contains($d, 'cocoa') && str_contains($d, 'powder'))                     return 5.0;
+    if (str_contains($d, 'extract'))                                                  return 4.0;
+    if (str_contains($d, 'vinegar'))                                                  return 15.0;
+
     // Keyword overrides — evaluated in spec-specified order; first match returns.
     if (preg_match('/spice|herb|\bleaves,\s*dried\b/', $d))                          return 2.0;
     if (str_contains($d, 'bacon'))                                                    return 15.0;
