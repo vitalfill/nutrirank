@@ -54,10 +54,6 @@ if (!$nutr_no || empty($food_groups)) {
 
 // --- Server-side entitlement enforcement ---
 // Premium nutrients require a valid short-lived session token issued by verify-entitlement.php.
-// The token is a random 256-bit credential stored (hashed) server-side.  Only one active
-// token exists per subscriber: re-issuing revokes the previous one, so a third party who
-// obtained a shared app user ID can get at most one 5-minute window before the legitimate
-// subscriber's next refresh invalidates their access.
 if (!in_array($nutr_no, FREE_NUTRIENT_NOS, true)) {
     $rc_entitlement_token = isset($input['rc_entitlement_token']) ? trim($input['rc_entitlement_token']) : '';
 
@@ -68,12 +64,104 @@ if (!in_array($nutr_no, FREE_NUTRIENT_NOS, true)) {
     }
 }
 
-try {
-    $db = get_db();
-    $limit  = 10;
-    $offset = ($page - 1) * $limit;
+// ---------------------------------------------------------------------------
+// Returns true if the Msre_Desc string identifies this as the NLEA/label serving.
+// ---------------------------------------------------------------------------
+function is_nlea_serving(string $desc): bool {
+    return (bool) preg_match('/\bnlea\b|^(1\s+)?serving$/i', trim($desc));
+}
 
-    // Build placeholders for IN clause
+// ---------------------------------------------------------------------------
+// Choose the best single serving for a food given its weight options and group.
+//
+// Priority:
+//   1. NLEA serving (Msre_Desc matches NLEA pattern)
+//   2. Nuts & seeds (FdGrp_Cd 1200) → 1 oz (28.35 g), synthesised if absent
+//   3. Most-realistic heuristic: household measure in 15–250 g, closest to 100 g
+//   4. Returns null → caller falls back to 100 g and sets is_fallback = true
+//
+// Returns [$chosen_weight_or_null, $weights_array]
+// $weights_array may have a synthetic entry prepended (nuts case only).
+// ---------------------------------------------------------------------------
+function select_serving(array $weights, string $fd_grp_cd): array {
+
+    // 1. NLEA serving
+    foreach ($weights as $w) {
+        if (!empty($w['is_nlea'])) {
+            return [$w, $weights];
+        }
+    }
+
+    // 2. Nuts & seeds → 1 oz
+    if ($fd_grp_cd === '1200') {
+        // Prefer existing entry near 28.35 g
+        foreach ($weights as $w) {
+            if (preg_match('/\b(oz|ounce)\b/i', $w['Msre_Desc']) && abs($w['Gm_Wgt'] - 28.35) < 5) {
+                return [$w, $weights];
+            }
+        }
+        // Any oz entry
+        foreach ($weights as $w) {
+            if (preg_match('/\b(oz|ounce)\b/i', $w['Msre_Desc'])) {
+                return [$w, $weights];
+            }
+        }
+        // Synthesise
+        $syn = ['Amount' => 1.0, 'Msre_Desc' => '1 oz', 'Gm_Wgt' => 28.35, 'is_nlea' => false];
+        array_unshift($weights, $syn);
+        return [$syn, $weights];
+    }
+
+    // 3. Most-realistic serving heuristic
+    $household_re = '/\b(cup|piece|slice|oz|ounce|tbsp|tsp|tablespoon|teaspoon|fl\s+oz|fluid\s+oz|serving|portion|item|unit|medium|large|small|fillet|steak|chop|breast|thigh|wing|leg|can|bottle|package|pkg|bar|patty|link|strip|nugget)\b/i';
+
+    // Build candidates with gram weights in [15, 250]
+    $candidates = [];
+    foreach ($weights as $w) {
+        if ($w['Gm_Wgt'] >= 15 && $w['Gm_Wgt'] <= 250) {
+            $candidates[] = array_merge($w, ['_hh' => (int)(bool) preg_match($household_re, $w['Msre_Desc'])]);
+        }
+    }
+
+    // Widen range if nothing in range
+    if (empty($candidates)) {
+        foreach ($weights as $w) {
+            if ($w['Gm_Wgt'] >= 5 && $w['Gm_Wgt'] <= 500) {
+                $candidates[] = array_merge($w, ['_hh' => (int)(bool) preg_match($household_re, $w['Msre_Desc'])]);
+            }
+        }
+    }
+
+    // Accept any positive weight as last resort before true fallback
+    if (empty($candidates)) {
+        foreach ($weights as $w) {
+            if ($w['Gm_Wgt'] > 0) {
+                $candidates[] = array_merge($w, ['_hh' => 0]);
+            }
+        }
+    }
+
+    if (empty($candidates)) {
+        return [null, $weights];
+    }
+
+    // Sort: prefer household measures, then closest to 100 g (deterministic)
+    usort($candidates, function ($a, $b) {
+        if ($a['_hh'] !== $b['_hh']) {
+            return $b['_hh'] - $a['_hh'];
+        }
+        return abs($a['Gm_Wgt'] - 100) - abs($b['Gm_Wgt'] - 100);
+    });
+
+    $chosen = $candidates[0];
+    unset($chosen['_hh']);
+    return [$chosen, $weights];
+}
+
+try {
+    $db    = get_db();
+    $limit = 10;
+
     $groupPh = implode(',', array_fill(0, count($food_groups), '?'));
 
     // --- Nutrient meta ---
@@ -87,89 +175,85 @@ try {
         exit;
     }
 
-    // --- Total count ---
-    $cStmt = $db->prepare("
-        SELECT COUNT(*)
-        FROM FOOD_DES f
-        JOIN NUT_DATA d ON f.NDB_No = d.NDB_No
-        WHERE d.Nutr_No = ?
-          AND f.FdGrp_Cd IN ($groupPh)
-    ");
-    $cStmt->execute(array_merge([$nutr_no], $food_groups));
-    $total       = (int)$cStmt->fetchColumn();
-    $total_pages = max(1, (int)ceil($total / $limit));
-    $page        = min($page, $total_pages);
-
-    // --- Foods page ---
-    // Rank by nutrient amount in the primary household serving:
-    //   serve_val = (Nutr_Val / 100) × primary_Gm_Wgt
-    // Foods without a WEIGHT entry fall back to 100 g (i.e. serve_val = Nutr_Val).
-    $fStmt = $db->prepare("
+    // --- Fetch ALL foods + ALL their weights in one query (no LIMIT) ---
+    // Ranking must happen in PHP so the serving-selection heuristic determines sort order.
+    // MySQL filters by nutrient + food groups; PHP groups, applies heuristic, sorts, paginates.
+    $params = array_merge([$nutr_no], $food_groups);
+    $allStmt = $db->prepare("
         SELECT f.NDB_No, f.Long_Desc, f.FdGrp_Cd, d.Nutr_Val,
-               COALESCE(pw.Gm_Wgt, 100)                           AS primary_gm_wgt,
-               (d.Nutr_Val / 100) * COALESCE(pw.Gm_Wgt, 100)     AS serve_val
+               w.Amount    AS w_Amount,
+               w.Msre_Desc AS w_Msre_Desc,
+               w.Gm_Wgt    AS w_Gm_Wgt
         FROM FOOD_DES f
         JOIN NUT_DATA d ON f.NDB_No = d.NDB_No
-        LEFT JOIN (
-            SELECT w1.NDB_No, w1.Gm_Wgt
-            FROM WEIGHT w1
-            JOIN (
-                SELECT NDB_No, MIN(Seq) AS min_seq
-                FROM WEIGHT
-                GROUP BY NDB_No
-            ) wmin ON w1.NDB_No = wmin.NDB_No AND w1.Seq = wmin.min_seq
-        ) pw ON f.NDB_No = pw.NDB_No
+        LEFT JOIN WEIGHT w ON f.NDB_No = w.NDB_No
         WHERE d.Nutr_No = ?
           AND f.FdGrp_Cd IN ($groupPh)
-        ORDER BY serve_val DESC
-        LIMIT $limit OFFSET $offset
+        ORDER BY f.NDB_No, w.Seq
     ");
-    $fStmt->execute(array_merge([$nutr_no], $food_groups));
-    $foods = $fStmt->fetchAll();
+    $allStmt->execute($params);
 
-    // --- Weights ---
-    $ndb_nos = array_column($foods, 'NDB_No');
-    $weights = [];
-
-    if (!empty($ndb_nos)) {
-        $wPh   = implode(',', array_fill(0, count($ndb_nos), '?'));
-        $wStmt = $db->prepare("
-            SELECT NDB_No, Amount, Msre_Desc, Gm_Wgt
-            FROM WEIGHT
-            WHERE NDB_No IN ($wPh)
-            ORDER BY NDB_No, Seq
-        ");
-        $wStmt->execute($ndb_nos);
-
-        while ($row = $wStmt->fetch()) {
-            $nid = $row['NDB_No'];
-            unset($row['NDB_No']);
-            $weights[$nid][] = [
-                'Amount'    => (float)$row['Amount'],
-                'Msre_Desc' => $row['Msre_Desc'],
-                'Gm_Wgt'    => (float)$row['Gm_Wgt'],
+    // --- Group rows by food, annotating each weight with is_nlea ---
+    $foods = [];
+    while ($row = $allStmt->fetch()) {
+        $ndb = $row['NDB_No'];
+        if (!isset($foods[$ndb])) {
+            $foods[$ndb] = [
+                'NDB_No'    => $ndb,
+                'Long_Desc' => $row['Long_Desc'],
+                'FdGrp_Cd'  => $row['FdGrp_Cd'],
+                'Nutr_Val'  => (float)$row['Nutr_Val'],
+                'weights'   => [],
+            ];
+        }
+        if ($row['w_Gm_Wgt'] !== null && (float)$row['w_Gm_Wgt'] > 0) {
+            $foods[$ndb]['weights'][] = [
+                'Amount'    => (float)$row['w_Amount'],
+                'Msre_Desc' => (string)$row['w_Msre_Desc'],
+                'Gm_Wgt'    => (float)$row['w_Gm_Wgt'],
+                'is_nlea'   => is_nlea_serving((string)$row['w_Msre_Desc']),
             ];
         }
     }
 
-    // --- Attach weights to foods ---
-    $result_foods = array_map(function ($f) use ($weights) {
-        return [
-            'NDB_No'   => $f['NDB_No'],
-            'Long_Desc'=> $f['Long_Desc'],
-            'FdGrp_Cd' => $f['FdGrp_Cd'],
-            'Nutr_Val' => (float)$f['Nutr_Val'],
-            'serve_val'=> round((float)$f['serve_val'], 4),
-            'weights'  => $weights[$f['NDB_No']] ?? [],
-        ];
-    }, $foods);
+    // --- Apply serving selection + compute serve_val per food ---
+    foreach ($foods as &$food) {
+        [$chosen, $food['weights']] = select_serving($food['weights'], $food['FdGrp_Cd']);
+
+        if ($chosen !== null) {
+            $food['chosen_gm_wgt'] = (float)$chosen['Gm_Wgt'];
+            $food['is_fallback']   = false;
+        } else {
+            $food['chosen_gm_wgt'] = 100.0;
+            $food['is_fallback']   = true;
+        }
+
+        $food['serve_val'] = round(($food['Nutr_Val'] / 100) * $food['chosen_gm_wgt'], 4);
+    }
+    unset($food);
+
+    // --- Sort descending by serve_val, then by Nutr_Val for ties (deterministic) ---
+    $foods = array_values($foods);
+    usort($foods, function ($a, $b) {
+        if ($b['serve_val'] !== $a['serve_val']) {
+            return $b['serve_val'] <=> $a['serve_val'];
+        }
+        return $b['Nutr_Val'] <=> $a['Nutr_Val'];
+    });
+
+    // --- Paginate ---
+    $total       = count($foods);
+    $total_pages = max(1, (int)ceil($total / $limit));
+    $page        = min($page, $total_pages);
+    $offset      = ($page - 1) * $limit;
+    $page_foods  = array_slice($foods, $offset, $limit);
 
     echo json_encode([
         'nutrient'    => $nutrient,
         'total'       => $total,
         'total_pages' => $total_pages,
         'page'        => $page,
-        'foods'       => $result_foods,
+        'foods'       => $page_foods,
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (PDOException $e) {
