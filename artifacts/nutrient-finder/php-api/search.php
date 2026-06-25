@@ -75,44 +75,92 @@ function is_nlea_serving(string $desc): bool {
 function get_racc_target(string $fd_grp_cd, string $long_desc): float {
     $d = strtolower($long_desc);
 
-    // Ingredient-type foods used in tiny amounts — checked first so they don't
-    // fall through to a meal-sized group default.
-    if (preg_match('/baking powder|baking soda|\bleavening\b/', $d))                 return 3.0;
-    if (str_contains($d, 'yeast') && !str_contains($d, 'extract'))                   return 3.0;
-    if (preg_match('/\bsalt\b/', $d) && !str_contains($d, 'salted'))                 return 1.0;
-    if (preg_match('/cornstarch|\bstarch\b/', $d))                                    return 8.0;
-    if (str_contains($d, 'gelatin'))                                                  return 7.0;
-    if (str_contains($d, 'cocoa') && str_contains($d, 'powder'))                     return 5.0;
-    if (str_contains($d, 'extract'))                                                  return 4.0;
-    if (str_contains($d, 'vinegar'))                                                  return 15.0;
+    // -----------------------------------------------------------------------
+    // 1. BAKED PRODUCTS (1800) — complete self-contained keyword table.
+    //    Ingredient words like "milk" or "buttermilk" in the name are noise;
+    //    only baked-goods shape/form keywords and ingredient forms matter here.
+    // -----------------------------------------------------------------------
+    if ($fd_grp_cd === '1800') {
+        if (preg_match('/bagel|muffin|biscuit|waffle|pancake/', $d))               return 110.0;
+        if (preg_match('/bread|cornbread|\broll\b|\bbun\b/', $d))                   return  50.0;
+        if (preg_match('/cookie|cracker|wafer/', $d))                               return  30.0;
+        if (preg_match('/cake|pie|pastr(y|ies)|pop.?tart|toaster\s+past|danish|donut|doughnut/', $d))
+                                                                                    return  80.0;
+        // Ingredient forms sold by weight — not a portion food
+        if (preg_match('/baking powder|baking soda|\bleavening\b/', $d))           return   3.0;
+        if (str_contains($d, 'yeast'))                                              return   3.0;
+        if (preg_match('/cornstarch|\bstarch\b/', $d))                              return   8.0;
+        if (str_contains($d, 'extract'))                                            return   4.0;
+        if (preg_match('/flour|\bmeal\b|cornmeal/', $d))                            return  30.0;
+        return 55.0; // group default
+    }
 
-    // Keyword overrides — evaluated in spec-specified order; first match returns.
-    if (preg_match('/spice|herb|\bleaves,\s*dried\b/', $d))                          return 2.0;
-    if (str_contains($d, 'bacon'))                                                    return 15.0;
-    if ($fd_grp_cd === '0100' && str_contains($d, 'egg'))                             return 50.0;
-    if (str_contains($d, 'cottage cheese'))                                           return 110.0;
-    if (str_contains($d, 'cheese'))                                                   return 30.0;
-    if (str_contains($d, 'yogurt'))                                                   return 170.0;
-    if (preg_match('/sour cream|cream cheese/', $d))                                  return 30.0;
-    if (preg_match('/milk|buttermilk/', $d) && !preg_match('/dry|dried|powder/', $d)) return 240.0;
-    if (preg_match('/dry|dried|powder/', $d) && preg_match('/\b(milk|whey)\b/', $d)) return 30.0;
-    if (preg_match('/nut butter|seed butter|peanut butter/', $d))                     return 32.0;
-    if (preg_match('/juice|nectar/', $d))                                             return 240.0;
-    if ($fd_grp_cd === '0900' && str_contains($d, 'dried'))                           return 40.0;
-    if (preg_match('/\boil\b|\bbutter\b|margarine|lard/', $d))                        return 14.0;
-    if (str_contains($d, 'soup'))                                                     return 245.0;
-    if (preg_match('/sauce|gravy/', $d))                                              return 60.0;
-    if (preg_match('/syrup|honey|\bjam\b|\bjelly\b|preserves/', $d))                  return 21.0;
-    if ($fd_grp_cd === '1900' && str_contains($d, 'sugar'))                           return 4.0;
-    if (preg_match('/chocolate|cand(y|ies)/', $d))                                    return 40.0;
-    if (preg_match('/flour|\bmeal\b|cornmeal/', $d))                                  return 30.0;
-    if ($fd_grp_cd === '2000' && str_contains($d, 'cooked'))                          return 140.0;
-    if (str_contains($d, 'bread'))                                                    return 50.0;
-    if (preg_match('/bagel|muffin|biscuit/', $d))                                     return 110.0;
-    if (preg_match('/cookie|cracker/', $d))                                           return 30.0;
-    if (preg_match('/\bcake\b|\bpie\b/', $d))                                         return 100.0;
-    if (preg_match('/lettuce|spinach, raw|greens, raw/', $d))                         return 85.0;
-    if (str_contains($d, 'tofu'))                                                     return 85.0;
+    // -----------------------------------------------------------------------
+    // 2. DAIRY & EGG (0100) + BEVERAGES (1400)
+    //    Dairy/beverage keywords are scoped to these groups only.
+    // -----------------------------------------------------------------------
+    if (in_array($fd_grp_cd, ['0100', '1400'], true)) {
+        if (str_contains($d, 'yogurt'))                                             return 170.0;
+        if (preg_match('/sour cream|cream cheese/', $d))                            return  30.0;
+        if (str_contains($d, 'cottage cheese'))                                     return 110.0;
+        if (str_contains($d, 'cheese'))                                             return  30.0;
+        if ($fd_grp_cd === '0100' && str_contains($d, 'egg'))                       return  50.0;
+        if (preg_match('/nut butter|seed butter|peanut butter/', $d))               return  32.0;
+        if (preg_match('/juice|nectar/', $d))                                       return 240.0;
+        if (preg_match('/dry|dried|powder/', $d) && preg_match('/\b(milk|whey)\b/', $d))
+                                                                                    return  30.0;
+        if (preg_match('/milk|buttermilk/', $d))                                    return 240.0;
+        if (preg_match('/\boil\b|\bbutter\b|margarine|lard/', $d))                  return  14.0;
+        return (float)($fd_grp_cd === '0100' ? 30 : 240);
+    }
+
+    // -----------------------------------------------------------------------
+    // 3. SPICES & HERBS (0200) — ingredient overrides scoped to this group
+    // -----------------------------------------------------------------------
+    if ($fd_grp_cd === '0200') {
+        if (preg_match('/baking powder|baking soda|\bleavening\b/', $d))           return   3.0;
+        if (str_contains($d, 'yeast'))                                              return   3.0;
+        if (preg_match('/\bsalt\b/', $d) && !str_contains($d, 'salted'))           return   1.0;
+        if (preg_match('/cornstarch|\bstarch\b/', $d))                              return   8.0;
+        if (str_contains($d, 'gelatin'))                                            return   7.0;
+        if (str_contains($d, 'cocoa') && str_contains($d, 'powder'))               return   5.0;
+        if (str_contains($d, 'extract'))                                            return   4.0;
+        if (str_contains($d, 'vinegar'))                                            return  15.0;
+        return 2.0; // group default
+    }
+
+    // -----------------------------------------------------------------------
+    // 4. SWEETS (1900) — ingredient and confection overrides
+    // -----------------------------------------------------------------------
+    if ($fd_grp_cd === '1900') {
+        if (str_contains($d, 'cocoa') && str_contains($d, 'powder'))               return   5.0;
+        if (str_contains($d, 'gelatin'))                                            return   7.0;
+        if (str_contains($d, 'extract'))                                            return   4.0;
+        if (preg_match('/cornstarch|\bstarch\b/', $d))                              return   8.0;
+        if (str_contains($d, 'sugar'))                                              return   4.0;
+        if (preg_match('/chocolate|cand(y|ies)/', $d))                             return  40.0;
+        if (preg_match('/syrup|honey|\bjam\b|\bjelly\b|preserves/', $d))           return  21.0;
+        return 40.0; // group default
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. GLOBAL KEYWORD OVERRIDES — all remaining groups
+    //    Dairy/beverage keywords (milk, yogurt, juice …) intentionally absent;
+    //    they are only meaningful inside groups 0100 and 1400.
+    // -----------------------------------------------------------------------
+    if (preg_match('/spice|herb|\bleaves,\s*dried\b/', $d))                        return   2.0;
+    if (str_contains($d, 'bacon'))                                                  return  15.0;
+    if (preg_match('/nut butter|seed butter|peanut butter/', $d))                  return  32.0;
+    if ($fd_grp_cd === '0900' && str_contains($d, 'dried'))                        return  40.0;
+    if (preg_match('/\boil\b|\bbutter\b|margarine|lard/', $d))                     return  14.0;
+    if (str_contains($d, 'soup'))                                                   return 245.0;
+    if (preg_match('/sauce|gravy/', $d))                                            return  60.0;
+    if (preg_match('/syrup|honey|\bjam\b|\bjelly\b|preserves/', $d))               return  21.0;
+    if (preg_match('/chocolate|cand(y|ies)/', $d))                                 return  40.0;
+    if (preg_match('/flour|\bmeal\b|cornmeal/', $d))                               return  30.0;
+    if ($fd_grp_cd === '2000' && str_contains($d, 'cooked'))                       return 140.0;
+    if (preg_match('/lettuce|spinach, raw|greens, raw/', $d))                      return  85.0;
+    if (str_contains($d, 'tofu'))                                                   return  85.0;
 
     // Group defaults
     static $defaults = [
