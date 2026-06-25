@@ -144,7 +144,15 @@ function get_racc_target(string $fd_grp_cd, string $long_desc): float {
     }
 
     // -----------------------------------------------------------------------
-    // 5. GLOBAL KEYWORD OVERRIDES — all remaining groups
+    // 5. FATS & OILS (0400) — dressings and condiments ~1 tbsp
+    // -----------------------------------------------------------------------
+    if ($fd_grp_cd === '0400') {
+        if (preg_match('/dressing|mayonnaise|\bmayo\b/', $d))                      return  15.0;
+        return 14.0; // group default (1 tbsp)
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. GLOBAL KEYWORD OVERRIDES — all remaining groups
     //    Dairy/beverage keywords (milk, yogurt, juice …) intentionally absent;
     //    they are only meaningful inside groups 0100 and 1400.
     // -----------------------------------------------------------------------
@@ -160,17 +168,20 @@ function get_racc_target(string $fd_grp_cd, string $long_desc): float {
     if (preg_match('/flour|\bmeal\b|cornmeal/', $d))                               return  30.0;
     if ($fd_grp_cd === '2000' && str_contains($d, 'cooked'))                       return 140.0;
     if (preg_match('/lettuce|spinach, raw|greens, raw/', $d))                      return  85.0;
-    if (str_contains($d, 'tofu'))                                                   return  85.0;
+    // "tofu" scoped to legumes (1600) only — prevents "Mayonnaise, made with tofu"
+    // and similar condiments from picking up the legume serving size.
+    if ($fd_grp_cd === '1600' && str_contains($d, 'tofu'))                         return  85.0;
 
-    // Group defaults
-    static $defaults = [
+    // Group defaults — plain array (not static) so every call is guaranteed a value.
+    // Hard fallback of 100 g for any group code not in the table.
+    $defaults = [
         '0100' => 30,  '0200' => 2,   '0300' => 60,  '0400' => 14,  '0500' => 85,
         '0600' => 120, '0700' => 55,  '0800' => 40,  '0900' => 140, '1000' => 85,
         '1100' => 85,  '1200' => 30,  '1300' => 85,  '1400' => 240, '1500' => 85,
         '1600' => 90,  '1700' => 85,  '1800' => 55,  '1900' => 40,  '2000' => 50,
         '2100' => 140, '2200' => 140, '2500' => 30,  '3500' => 140, '3600' => 140,
     ];
-    return (float)($defaults[$fd_grp_cd] ?? 55);
+    return (float)($defaults[$fd_grp_cd] ?? 100);
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +240,7 @@ function select_serving(array $weights, string $fd_grp_cd, string $long_desc): a
                 'chosen_gm_wgt'    => (float)$w['Gm_Wgt'],
                 'chosen_msre_desc' => (string)$w['Msre_Desc'],
                 'chosen_amount'    => (float)$w['Amount'],
-                'racc_target_g'    => null,
+                'racc_target_g'    => get_racc_target($fd_grp_cd, $long_desc),
                 'is_nlea'          => true,
                 'is_fallback'      => false,
                 'weights'          => $weights,
