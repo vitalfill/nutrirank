@@ -25,10 +25,8 @@ interface Props {
 }
 
 const PERKS = [
-  { icon: "science",     label: "All nutrients unlocked" },
-  { icon: "leaderboard", label: "Unlimited pages" },
-  { icon: "star",        label: "Save favorites" },
-  { icon: "bolt",        label: "Per-serving rankings" },
+  { icon: "science", label: "All nutrients unlocked" },
+  { icon: "star",    label: "Save favorites" },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
