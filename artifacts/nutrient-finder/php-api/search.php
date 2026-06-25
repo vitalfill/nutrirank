@@ -118,6 +118,10 @@ function get_racc_target(string $fd_grp_cd, string $long_desc): float {
     // 3. SPICES & HERBS (0200) — ingredient overrides scoped to this group
     // -----------------------------------------------------------------------
     if ($fd_grp_cd === '0200') {
+        if (preg_match('/spirulina|chlorella/', $d))                                return   7.0;
+        if (preg_match('/seaweed|kelp|nori|wakame|kombu|\blaver\b|\bagar\b|irish moss/', $d))
+                                                                                    return   7.0;
+        if (preg_match('/freeze.?dried/', $d))                                      return  15.0;
         if (preg_match('/baking powder|baking soda|\bleavening\b/', $d))           return   3.0;
         if (str_contains($d, 'yeast'))                                              return   3.0;
         if (preg_match('/\bsalt\b/', $d) && !str_contains($d, 'salted'))           return   1.0;
@@ -144,7 +148,20 @@ function get_racc_target(string $fd_grp_cd, string $long_desc): float {
     }
 
     // -----------------------------------------------------------------------
-    // 5. FATS & OILS (0400) — dressings and condiments ~1 tbsp
+    // 5. VEGETABLES (1100) — algae, seaweed, and freeze-dried items
+    //    Nutrient-dense dry foods that are eaten in tiny amounts; they would
+    //    inherit the 85 g vegetable default and rank unrealistically high.
+    // -----------------------------------------------------------------------
+    if ($fd_grp_cd === '1100') {
+        if (preg_match('/spirulina|chlorella/', $d))                                return   7.0;
+        if (preg_match('/seaweed|kelp|nori|wakame|kombu|\blaver\b|\bagar\b|irish moss/', $d))
+                                                                                    return   7.0;
+        if (preg_match('/freeze.?dried/', $d))                                      return  15.0;
+        return 85.0; // group default
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. FATS & OILS (0400) — dressings and condiments ~1 tbsp
     // -----------------------------------------------------------------------
     if ($fd_grp_cd === '0400') {
         if (preg_match('/dressing|mayonnaise|\bmayo\b/', $d))                      return  15.0;
