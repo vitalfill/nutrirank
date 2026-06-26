@@ -47,6 +47,5 @@ export const FREE_NUTRIENT_NOS = new Set([
   "431",
 ]);
 
-export const SUBSCRIPTION_PRICE = "$7.99 / year";
 export const STRIPE_CHECKOUT_URL = `${API_BASE}/create-checkout.php`;
 export const STRIPE_VERIFY_URL = `${API_BASE}/check-subscription.php`;
