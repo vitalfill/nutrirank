@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
-import { useSubscription } from "@/lib/revenuecat";
 import { Nutrient } from "@/types";
 
 interface Props {
@@ -34,16 +33,9 @@ export default function NutrientPickerModal({
 }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { offerings } = useSubscription();
   const [visible, setVisible] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Live annual price from RevenueCat — null while offerings are loading.
-  // Never falls back to a hardcoded price.
-  const annualPriceString: string | null =
-    offerings?.current?.availablePackages
-      ?.find((p: any) => p.packageType === "ANNUAL")
-      ?.product?.priceString ?? null;
 
   const filtered = useMemo(() => {
     if (!search.trim()) return nutrients;
@@ -94,7 +86,6 @@ export default function NutrientPickerModal({
               <MaterialIcons name="lock" size={15} color={colors.gold} />
               <Text style={styles.upgradeText}>
                 Locked nutrients require NutriRank Pro
-                {annualPriceString ? ` · ${annualPriceString}/yr` : ""}
               </Text>
               <MaterialIcons name="arrow-forward-ios" size={12} color={colors.gold} />
             </Pressable>
