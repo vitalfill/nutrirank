@@ -359,14 +359,16 @@ export function getNutrientInfo(nutrNo: string): NutrientInfo | null {
 
 // Per-nutrient source URLs for citations (NIH ODS fact sheets where available;
 // MedlinePlus for nutrients without a dedicated ODS consumer sheet).
+// MedlinePlus links use the canonical medlineplus.gov domain (the older
+// www.nlm.nih.gov/medleineplus paths only resolve via a deprecated redirect).
 const NUTRIENT_SOURCE_URLS: Record<string, string> = {
-  "203": "https://www.nlm.nih.gov/medlineplus/dietaryproteins.html",
-  "204": "https://www.nlm.nih.gov/medlineplus/dietaryfats.html",
-  "205": "https://www.nlm.nih.gov/medlineplus/carbohydrates.html",
-  "208": "https://www.nlm.nih.gov/medlineplus/calories.html",
-  "221": "https://www.nlm.nih.gov/medlineplus/alcohol.html",
-  "269": "https://www.nlm.nih.gov/medlineplus/carbohydrates.html",
-  "291": "https://www.nlm.nih.gov/medlineplus/dietaryfiber.html",
+  "203": "https://medlineplus.gov/dietaryproteins.html",
+  "204": "https://medlineplus.gov/dietaryfats.html",
+  "205": "https://medlineplus.gov/carbohydrates.html",
+  "208": "https://medlineplus.gov/dietarystatistics.html",
+  "221": "https://medlineplus.gov/alcohol.html",
+  "269": "https://medlineplus.gov/carbohydrates.html",
+  "291": "https://medlineplus.gov/dietaryfiber.html",
   "301": "https://ods.od.nih.gov/factsheets/Calcium-Consumer/",
   "303": "https://ods.od.nih.gov/factsheets/Iron-Consumer/",
   "304": "https://ods.od.nih.gov/factsheets/Magnesium-Consumer/",
@@ -394,11 +396,11 @@ const NUTRIENT_SOURCE_URLS: Record<string, string> = {
   "430": "https://ods.od.nih.gov/factsheets/VitaminK-Consumer/",
   "431": "https://ods.od.nih.gov/factsheets/Folate-Consumer/",
   "435": "https://ods.od.nih.gov/factsheets/Folate-Consumer/",
-  "601": "https://www.nlm.nih.gov/medlineplus/cholesterol.html",
-  "606": "https://www.nlm.nih.gov/medlineplus/dietaryfats.html",
+  "601": "https://medlineplus.gov/cholesterol.html",
+  "606": "https://medlineplus.gov/dietaryfats.html",
   "621": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
   "629": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
-  "645": "https://www.nlm.nih.gov/medlineplus/dietaryfats.html",
+  "645": "https://medlineplus.gov/dietaryfats.html",
   "646": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
   "851": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
 };
