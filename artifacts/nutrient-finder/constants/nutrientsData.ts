@@ -356,3 +356,62 @@ export function getNutrientInfo(nutrNo: string): NutrientInfo | null {
   if (AMINO_ACID_CODES.includes(nutrNo)) return AMINO_ACID_INFO;
   return null;
 }
+
+// Per-nutrient source URLs for citations (NIH ODS fact sheets where available;
+// MedlinePlus for nutrients without a dedicated ODS consumer sheet).
+const NUTRIENT_SOURCE_URLS: Record<string, string> = {
+  "203": "https://www.nlm.nih.gov/medlineplus/dietaryproteins.html",
+  "204": "https://www.nlm.nih.gov/medlineplus/dietaryfats.html",
+  "205": "https://www.nlm.nih.gov/medlineplus/carbohydrates.html",
+  "208": "https://www.nlm.nih.gov/medlineplus/calories.html",
+  "221": "https://www.nlm.nih.gov/medlineplus/alcohol.html",
+  "269": "https://www.nlm.nih.gov/medlineplus/carbohydrates.html",
+  "291": "https://www.nlm.nih.gov/medlineplus/dietaryfiber.html",
+  "301": "https://ods.od.nih.gov/factsheets/Calcium-Consumer/",
+  "303": "https://ods.od.nih.gov/factsheets/Iron-Consumer/",
+  "304": "https://ods.od.nih.gov/factsheets/Magnesium-Consumer/",
+  "305": "https://ods.od.nih.gov/factsheets/Phosphorus-Consumer/",
+  "306": "https://ods.od.nih.gov/factsheets/Potassium-Consumer/",
+  "307": "https://ods.od.nih.gov/factsheets/Sodium-Consumer/",
+  "309": "https://ods.od.nih.gov/factsheets/Zinc-Consumer/",
+  "312": "https://ods.od.nih.gov/factsheets/Copper-Consumer/",
+  "315": "https://ods.od.nih.gov/factsheets/Manganese-Consumer/",
+  "317": "https://ods.od.nih.gov/factsheets/Selenium-Consumer/",
+  "318": "https://ods.od.nih.gov/factsheets/VitaminA-Consumer/",
+  "320": "https://ods.od.nih.gov/factsheets/VitaminA-Consumer/",
+  "323": "https://ods.od.nih.gov/factsheets/VitaminE-Consumer/",
+  "324": "https://ods.od.nih.gov/factsheets/VitaminD-Consumer/",
+  "328": "https://ods.od.nih.gov/factsheets/VitaminD-Consumer/",
+  "401": "https://ods.od.nih.gov/factsheets/VitaminC-Consumer/",
+  "404": "https://ods.od.nih.gov/factsheets/Thiamin-Consumer/",
+  "405": "https://ods.od.nih.gov/factsheets/Riboflavin-Consumer/",
+  "406": "https://ods.od.nih.gov/factsheets/Niacin-Consumer/",
+  "410": "https://ods.od.nih.gov/factsheets/PantothenicAcid-Consumer/",
+  "415": "https://ods.od.nih.gov/factsheets/VitaminB6-Consumer/",
+  "417": "https://ods.od.nih.gov/factsheets/Folate-Consumer/",
+  "418": "https://ods.od.nih.gov/factsheets/VitaminB12-Consumer/",
+  "421": "https://ods.od.nih.gov/factsheets/Choline-Consumer/",
+  "430": "https://ods.od.nih.gov/factsheets/VitaminK-Consumer/",
+  "431": "https://ods.od.nih.gov/factsheets/Folate-Consumer/",
+  "435": "https://ods.od.nih.gov/factsheets/Folate-Consumer/",
+  "601": "https://www.nlm.nih.gov/medlineplus/cholesterol.html",
+  "606": "https://www.nlm.nih.gov/medlineplus/dietaryfats.html",
+  "621": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
+  "629": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
+  "645": "https://www.nlm.nih.gov/medlineplus/dietaryfats.html",
+  "646": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
+  "851": "https://ods.od.nih.gov/factsheets/Omega3FattyAcids-Consumer/",
+};
+
+const AMINO_ACID_SOURCE_URL = "https://ods.od.nih.gov/factsheets/list-all/";
+
+/**
+ * Returns the primary citation URL for a nutrient (NIH ODS fact sheet or MedlinePlus).
+ * All nutrient data in NutriRank ultimately comes from USDA FoodData Central, which is
+ * always listed as a secondary source in SourcesFooter.
+ */
+export function getNutrientSourceUrl(nutrNo: string): string | null {
+  if (NUTRIENT_SOURCE_URLS[nutrNo]) return NUTRIENT_SOURCE_URLS[nutrNo];
+  if (AMINO_ACID_CODES.includes(nutrNo)) return AMINO_ACID_SOURCE_URL;
+  return null;
+}
