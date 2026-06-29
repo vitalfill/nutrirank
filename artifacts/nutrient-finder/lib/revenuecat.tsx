@@ -176,10 +176,20 @@ function useSubscriptionContext() {
         (result as any).transaction?.transactionIdentifier ?? null;
       return { customerInfo: result.customerInfo, transactionId };
     },
-    onSuccess: ({ transactionId }) => {
+    onSuccess: async ({ transactionId }) => {
       customerInfoQuery.refetch();
+
+      // iOS returns a usable StoreKit transactionIdentifier — claim by it.
       if (transactionId) {
-        claimByTransactionId(transactionId);
+        await claimByTransactionId(transactionId);
+      }
+
+      // Fallback for Android (transactionIdentifier is null there) or any case where
+      // the purchase-path claim didn't land. claimByRestoreNonce is store-agnostic and
+      // is skipped automatically if a credential already exists, so it's safe on iOS.
+      const stored = await AsyncStorage.getItem(CREDENTIAL_KEY);
+      if (!stored) {
+        await claimByRestoreNonce();
       }
     },
   });
