@@ -359,8 +359,6 @@ export function getNutrientInfo(nutrNo: string): NutrientInfo | null {
 
 // Per-nutrient source URLs for citations (NIH ODS fact sheets where available;
 // MedlinePlus for nutrients without a dedicated ODS consumer sheet).
-// MedlinePlus links use the canonical medlineplus.gov domain (the older
-// www.nlm.nih.gov/medleineplus paths only resolve via a deprecated redirect).
 const NUTRIENT_SOURCE_URLS: Record<string, string> = {
   "203": "https://medlineplus.gov/dietaryproteins.html",
   "204": "https://medlineplus.gov/dietaryfats.html",
