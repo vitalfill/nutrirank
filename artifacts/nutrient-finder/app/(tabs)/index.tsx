@@ -231,7 +231,7 @@ export default function HomeScreen() {
     });
     const text = [
       `🌿 NutriRank — Top Foods for ${debouncedNutrient.NutrDesc}`,
-      `Ranked per 100 g · ${searchData.total.toLocaleString()} foods found`,
+      `Ranked by typical serving size · ${searchData.total.toLocaleString()} foods found`,
       `──────────────────────`,
       ...lines,
       `──────────────────────`,
@@ -388,7 +388,7 @@ export default function HomeScreen() {
         <MaterialIcons name="search" size={44} color={colors.warmAccent} />
         <Text style={styles.emptyTitle}>Select a Nutrient</Text>
         <Text style={styles.emptyText}>
-          Choose a nutrient above to discover which foods contain the most of it — ranked per 100 g.
+          Choose a nutrient above to discover which foods contain the most of it — ranked by typical serving size.
         </Text>
         <Pressable
           style={({ pressed }) => [styles.quizPromptBtn, pressed && { opacity: 0.8 }]}
