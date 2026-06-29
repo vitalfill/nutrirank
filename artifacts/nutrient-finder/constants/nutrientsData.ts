@@ -363,7 +363,7 @@ const NUTRIENT_SOURCE_URLS: Record<string, string> = {
   "203": "https://medlineplus.gov/dietaryproteins.html",
   "204": "https://medlineplus.gov/dietaryfats.html",
   "205": "https://medlineplus.gov/carbohydrates.html",
-  "208": "https://medlineplus.gov/dietarystatistics.html",
+  "208": "https://medlineplus.gov/nutrition.html",
   "221": "https://medlineplus.gov/alcohol.html",
   "269": "https://medlineplus.gov/carbohydrates.html",
   "291": "https://medlineplus.gov/dietaryfiber.html",
