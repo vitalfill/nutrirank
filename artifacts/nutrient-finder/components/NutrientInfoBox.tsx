@@ -3,9 +3,10 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
-import { getNutrientInfo } from "@/constants/nutrientsData";
+import { getNutrientInfo, getNutrientSourceUrl } from "@/constants/nutrientsData";
 import { getInteraction } from "@/constants/interactions";
 import { getDV, formatDVLabel, UserProfile } from "@/constants/userProfile";
+import SourcesFooter from "@/components/SourcesFooter";
 import { Nutrient } from "@/types";
 
 interface Props {
@@ -33,6 +34,7 @@ export default function NutrientInfoBox({ nutrient, profile, collapsed, onToggle
   const colors = useColors();
   const info = getNutrientInfo(nutrient.Nutr_No);
   const interaction = getInteraction(nutrient.Nutr_No);
+  const sourceUrl = getNutrientSourceUrl(nutrient.Nutr_No);
 
   if (!info) return null;
 
@@ -90,6 +92,13 @@ export default function NutrientInfoBox({ nutrient, profile, collapsed, onToggle
               <Text style={styles.interactionText}>{interaction}</Text>
             </View>
           )}
+
+          <SourcesFooter
+            sources={[
+              ...(sourceUrl ? [{ label: "NIH / MedlinePlus", url: sourceUrl }] : []),
+              { label: "USDA FoodData Central", url: "https://fdc.nal.usda.gov/" },
+            ]}
+          />
         </>
       )}
     </View>
