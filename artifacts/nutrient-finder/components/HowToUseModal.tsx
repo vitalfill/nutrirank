@@ -39,7 +39,7 @@ const STEPS = [
     icon: "leaderboard" as const,
     color: "#52B788",
     title: "3. Read the Rankings",
-    body: "Foods are ranked from highest to lowest content per 100 g. The number in the green badge shows the overall rank.",
+    body: "Foods are ranked from highest to lowest by typical serving size. The number in the green badge shows the overall rank.",
   },
   {
     icon: "restaurant" as const,
@@ -99,7 +99,7 @@ export default function HowToUseModal({ visible, onClose }: Props) {
               <MaterialIcons name="eco" size={32} color={colors.primary} />
               <Text style={styles.heroTitle}>Find the Richest Food Sources for Any Nutrient</Text>
               <Text style={styles.heroBody}>
-                NutriRank searches the USDA FoodData Central database and ranks every food by how much of a specific nutrient it contains — per 100 g. It's the fastest way to discover what to eat more of.
+                NutriRank searches the USDA FoodData Central database and ranks every food by how much of a specific nutrient it contains per typical serving size. It's the fastest way to discover what to eat more of.
               </Text>
             </View>
 
@@ -157,11 +157,11 @@ export default function HowToUseModal({ visible, onClose }: Props) {
               </View>
             </View>
 
-            {/* Note on 100g baseline */}
+            {/* Note on serving size vs 100g display */}
             <View style={styles.noteCard}>
               <MaterialIcons name="balance" size={18} color={colors.accent} />
               <Text style={styles.noteText}>
-                <Text style={styles.noteBold}>Why 100 g?</Text> Ranking by 100 g puts every food on the same level playing field, making comparisons fair and consistent. Use the serving size selector on each card to see real-world amounts.
+                <Text style={styles.noteBold}>Ranking vs. display:</Text> Rankings are always by typical serving size (e.g. 1 cup, 1 oz). The "100 g" toggle on each card is a display option that lets you compare foods on a standardized weight — it does not change the ranking order.
               </Text>
             </View>
 
