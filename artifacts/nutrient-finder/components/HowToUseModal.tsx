@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const PRIVACY_URL = "https://vital-fill.com/privacy.php";
 
 import { useColors } from "@/hooks/useColors";
+import SourcesModal from "@/components/SourcesModal";
 
 interface Props {
   visible: boolean;
@@ -60,93 +61,132 @@ export default function HowToUseModal({ visible, onClose }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
+  const [showSources, setShowSources] = React.useState(false);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="formSheet"
-      onRequestClose={onClose}
-    >
-      <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <MaterialIcons name="help-outline" size={20} color={colors.accent} />
-            <Text style={styles.headerTitle}>How to Use NutriRank</Text>
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        presentationStyle="formSheet"
+        onRequestClose={onClose}
+      >
+        <View style={[styles.container, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <MaterialIcons name="help-outline" size={20} color={colors.accent} />
+              <Text style={styles.headerTitle}>How to Use NutriRank</Text>
+            </View>
+            <Pressable onPress={onClose} style={styles.closeBtn}>
+              <Ionicons name="close" size={24} color={colors.foreground} />
+            </Pressable>
           </View>
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color={colors.foreground} />
-          </Pressable>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 40 }]}
+          >
+            {/* Disclaimer */}
+            <View style={styles.disclaimerCard}>
+              <MaterialIcons name="info-outline" size={16} color={colors.accent} />
+              <Text style={styles.disclaimerText}>
+                NutriRank provides nutrition information for educational purposes only and is not medical advice. Consult a healthcare professional for dietary or medical decisions.
+              </Text>
+            </View>
+
+            {/* Hero blurb */}
+            <View style={styles.heroBanner}>
+              <MaterialIcons name="eco" size={32} color={colors.primary} />
+              <Text style={styles.heroTitle}>Find the Richest Food Sources for Any Nutrient</Text>
+              <Text style={styles.heroBody}>
+                NutriRank searches the USDA FoodData Central database and ranks every food by how much of a specific nutrient it contains — per 100 g. It's the fastest way to discover what to eat more of.
+              </Text>
+            </View>
+
+            {/* Steps */}
+            <Text style={styles.sectionTitle}>Getting Started</Text>
+            {STEPS.map(step => (
+              <View key={step.title} style={styles.stepCard}>
+                <View style={[styles.stepIcon, { backgroundColor: step.color + "20" }]}>
+                  <MaterialIcons name={step.icon} size={22} color={step.color} />
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>{step.title}</Text>
+                  <Text style={styles.stepBody}>{step.body}</Text>
+                </View>
+              </View>
+            ))}
+
+            {/* DV Explainer */}
+            <Text style={styles.sectionTitle}>What is % Daily Value (% DV)?</Text>
+            <View style={styles.dvCard}>
+              <View style={styles.dvHeader}>
+                <MaterialIcons name="info-outline" size={18} color={colors.accent} />
+                <Text style={styles.dvHeaderText}>FDA Daily Value Guide</Text>
+              </View>
+              <Text style={styles.dvBody}>{DV_EXPLANATION}</Text>
+              <View style={styles.dvScale}>
+                <View style={styles.dvScaleItem}>
+                  <View style={[styles.dvDot, { backgroundColor: colors.destructive }]} />
+                  <Text style={styles.dvScaleText}><Text style={styles.dvScaleBold}>5% DV or less</Text> — Low</Text>
+                </View>
+                <View style={styles.dvScaleItem}>
+                  <View style={[styles.dvDot, { backgroundColor: colors.gold }]} />
+                  <Text style={styles.dvScaleText}><Text style={styles.dvScaleBold}>6–19% DV</Text> — Moderate</Text>
+                </View>
+                <View style={styles.dvScaleItem}>
+                  <View style={[styles.dvDot, { backgroundColor: colors.primary }]} />
+                  <Text style={styles.dvScaleText}><Text style={styles.dvScaleBold}>20% DV or more</Text> — High</Text>
+                </View>
+              </View>
+
+              {/* DV Citations */}
+              <View style={styles.dvCitations}>
+                <Text style={styles.dvCiteLabel}>Sources:</Text>
+                <Pressable onPress={() => Linking.openURL("https://www.fda.gov/food/nutrition-facts-label/daily-value-nutrition-and-supplement-facts-labels")}>
+                  <Text style={styles.dvCiteLink}>FDA Daily Values</Text>
+                </Pressable>
+                <Text style={styles.dvCiteSep}> · </Text>
+                <Pressable onPress={() => Linking.openURL("https://ods.od.nih.gov/HealthInformation/nutrientrecommendations.aspx")}>
+                  <Text style={styles.dvCiteLink}>NIH Dietary Reference Intakes</Text>
+                </Pressable>
+                <Text style={styles.dvCiteSep}> · </Text>
+                <Pressable onPress={() => Linking.openURL("https://fdc.nal.usda.gov/")}>
+                  <Text style={styles.dvCiteLink}>USDA FoodData Central</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Note on 100g baseline */}
+            <View style={styles.noteCard}>
+              <MaterialIcons name="balance" size={18} color={colors.accent} />
+              <Text style={styles.noteText}>
+                <Text style={styles.noteBold}>Why 100 g?</Text> Ranking by 100 g puts every food on the same level playing field, making comparisons fair and consistent. Use the serving size selector on each card to see real-world amounts.
+              </Text>
+            </View>
+
+            {/* Sources & References button */}
+            <Pressable
+              onPress={() => setShowSources(true)}
+              style={({ pressed }) => [styles.sourcesBtn, pressed && { opacity: 0.75 }]}
+            >
+              <MaterialIcons name="menu-book" size={16} color={colors.primary} />
+              <Text style={styles.sourcesBtnText}>Sources & References</Text>
+              <MaterialIcons name="arrow-forward-ios" size={13} color={colors.primary} />
+            </Pressable>
+
+            {/* Privacy + Copyright */}
+            <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} style={styles.privacyLink}>
+              <MaterialIcons name="privacy-tip" size={13} color="#40916C" />
+              <Text style={styles.privacyText}>Privacy Policy</Text>
+            </Pressable>
+            <Text style={styles.copyright}>© Copyright Vital Fill LLC 2026</Text>
+          </ScrollView>
         </View>
+      </Modal>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 40 }]}
-        >
-          {/* Hero blurb */}
-          <View style={styles.heroBanner}>
-            <MaterialIcons name="eco" size={32} color={colors.primary} />
-            <Text style={styles.heroTitle}>Find the Richest Food Sources for Any Nutrient</Text>
-            <Text style={styles.heroBody}>
-              NutriRank searches the USDA FDA food database and ranks every food by how much of a specific nutrient it contains — per 100 g. It's the fastest way to discover what to eat more of.
-            </Text>
-          </View>
-
-          {/* Steps */}
-          <Text style={styles.sectionTitle}>Getting Started</Text>
-          {STEPS.map(step => (
-            <View key={step.title} style={styles.stepCard}>
-              <View style={[styles.stepIcon, { backgroundColor: step.color + "20" }]}>
-                <MaterialIcons name={step.icon} size={22} color={step.color} />
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={styles.stepTitle}>{step.title}</Text>
-                <Text style={styles.stepBody}>{step.body}</Text>
-              </View>
-            </View>
-          ))}
-
-          {/* DV Explainer */}
-          <Text style={styles.sectionTitle}>What is % Daily Value (% DV)?</Text>
-          <View style={styles.dvCard}>
-            <View style={styles.dvHeader}>
-              <MaterialIcons name="info-outline" size={18} color={colors.accent} />
-              <Text style={styles.dvHeaderText}>FDA Daily Value Guide</Text>
-            </View>
-            <Text style={styles.dvBody}>{DV_EXPLANATION}</Text>
-            <View style={styles.dvScale}>
-              <View style={styles.dvScaleItem}>
-                <View style={[styles.dvDot, { backgroundColor: colors.destructive }]} />
-                <Text style={styles.dvScaleText}><Text style={styles.dvScaleBold}>5% DV or less</Text> — Low</Text>
-              </View>
-              <View style={styles.dvScaleItem}>
-                <View style={[styles.dvDot, { backgroundColor: colors.gold }]} />
-                <Text style={styles.dvScaleText}><Text style={styles.dvScaleBold}>6–19% DV</Text> — Moderate</Text>
-              </View>
-              <View style={styles.dvScaleItem}>
-                <View style={[styles.dvDot, { backgroundColor: colors.primary }]} />
-                <Text style={styles.dvScaleText}><Text style={styles.dvScaleBold}>20% DV or more</Text> — High</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Note on 100g baseline */}
-          <View style={styles.noteCard}>
-            <MaterialIcons name="balance" size={18} color={colors.accent} />
-            <Text style={styles.noteText}>
-              <Text style={styles.noteBold}>Why 100 g?</Text> Ranking by 100 g puts every food on the same level playing field, making comparisons fair and consistent. Use the serving size selector on each card to see real-world amounts.
-            </Text>
-          </View>
-
-          {/* Privacy + Copyright */}
-          <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} style={styles.privacyLink}>
-            <MaterialIcons name="privacy-tip" size={13} color="#40916C" />
-            <Text style={styles.privacyText}>Privacy Policy</Text>
-          </Pressable>
-          <Text style={styles.copyright}>© Copyright Vital Fill LLC 2026</Text>
-        </ScrollView>
-      </View>
-    </Modal>
+      <SourcesModal visible={showSources} onClose={() => setShowSources(false)} />
+    </>
   );
 }
 
@@ -212,6 +252,39 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       flex: 1, fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular", lineHeight: 19,
     },
     noteBold: { fontFamily: "Inter_600SemiBold", color: colors.foreground },
+    disclaimerCard: {
+      flexDirection: "row", gap: 10, alignItems: "flex-start",
+      backgroundColor: colors.infoBox, borderWidth: 1, borderColor: colors.infoBoxBorder,
+      borderRadius: 12, padding: 12,
+    },
+    disclaimerText: {
+      flex: 1, fontSize: 13, color: colors.foreground,
+      fontFamily: "Inter_400Regular", lineHeight: 20,
+    },
+    dvCitations: {
+      flexDirection: "row", flexWrap: "wrap", alignItems: "center",
+      paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border,
+      marginTop: 2,
+    },
+    dvCiteLabel: {
+      fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular",
+      marginRight: 2,
+    },
+    dvCiteLink: {
+      fontSize: 11, color: colors.primary, fontFamily: "Inter_400Regular",
+      textDecorationLine: "underline",
+    },
+    dvCiteSep: {
+      fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular",
+    },
+    sourcesBtn: {
+      flexDirection: "row", alignItems: "center", gap: 8,
+      backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+      borderRadius: 12, padding: 14,
+    },
+    sourcesBtnText: {
+      flex: 1, fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.primary,
+    },
     privacyLink: {
       flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
       paddingVertical: 6,
