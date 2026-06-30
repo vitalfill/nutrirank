@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
@@ -473,11 +474,31 @@ export default function HomeScreen() {
                 >
                   <MaterialIcons name="help-outline" size={20} color="rgba(255,255,255,0.8)" />
                 </Pressable>
-                {isSubscribed && (
-                  <View style={styles.proBadge}>
+                {isSubscribed ? (
+                  <Pressable
+                    style={({ pressed }) => [styles.proBadge, pressed && { opacity: 0.7 }]}
+                    onPress={() => {
+                      // Open the platform's native Manage Subscriptions screen so the
+                      // user can change tier or cancel. iOS and Android use different URLs.
+                      const url = Platform.OS === "ios"
+                        ? "https://apps.apple.com/account/subscriptions"
+                        : "https://play.google.com/store/account/subscriptions";
+                      Linking.openURL(url).catch(() => {});
+                    }}
+                    accessibilityLabel="Manage your NutriRank Pro subscription"
+                  >
                     <MaterialIcons name="verified" size={12} color={colors.gold} />
                     <Text style={styles.proBadgeText}>Pro</Text>
-                  </View>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [styles.upgradeBadge, pressed && { opacity: 0.7 }]}
+                    onPress={() => setShowPaywall(true)}
+                    accessibilityLabel="Upgrade to NutriRank Pro"
+                  >
+                    <MaterialIcons name="workspace-premium" size={12} color={colors.gold} />
+                    <Text style={styles.proBadgeText}>Upgrade</Text>
+                  </Pressable>
                 )}
               </View>
             </View>
@@ -612,6 +633,12 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     proBadge: {
       flexDirection: "row", alignItems: "center", gap: 3,
       backgroundColor: "rgba(255,255,255,0.15)",
+      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
+    },
+    upgradeBadge: {
+      flexDirection: "row", alignItems: "center", gap: 3,
+      backgroundColor: "rgba(233,196,106,0.22)",
+      borderWidth: 1, borderColor: "rgba(233,196,106,0.55)",
       borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
     },
     proBadgeText: { fontSize: 11, color: colors.gold, fontFamily: "Inter_700Bold" },
