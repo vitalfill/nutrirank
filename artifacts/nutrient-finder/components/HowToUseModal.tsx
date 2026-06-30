@@ -167,7 +167,13 @@ export default function HowToUseModal({ visible, onClose }: Props) {
 
             {/* Sources & References button */}
             <Pressable
-              onPress={() => setShowSources(true)}
+              onPress={() => {
+                // Close this modal first, then open Sources after it has dismissed.
+                // Presenting a second formSheet modal while this one is still open
+                // deadlocks iOS touch handling (app stops responding to taps).
+                onClose();
+                setTimeout(() => setShowSources(true), 450);
+              }}
               style={({ pressed }) => [styles.sourcesBtn, pressed && { opacity: 0.75 }]}
             >
               <MaterialIcons name="menu-book" size={16} color={colors.primary} />
