@@ -42,6 +42,33 @@ export function initializeRevenueCat() {
   console.log("RevenueCat configured");
 }
 
+// Claims a credential by asking the server to verify the entitlement directly with
+// RevenueCat (register-subscription.php → verify_rc_entitlement). This is the most
+// reliable path: it has no dependency on webhook timing or nonce relays. The server
+// only issues a credential if RevenueCat reports an ACTIVE premium entitlement for
+// this app user, so it cannot be abused by a non-subscriber.
+async function claimByUserId(appUserId: string): Promise<boolean> {
+  const stored = await AsyncStorage.getItem(CREDENTIAL_KEY);
+  if (stored) return true; // Already have a credential.
+
+  try {
+    const res = await fetch(`${API_BASE}/register-subscription.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rc_app_user_id: appUserId }),
+    });
+    if (!res.ok) return false; // 403 = not premium per RevenueCat; handled by caller.
+    const data = await res.json();
+    if (data.credential && typeof data.credential === "string") {
+      await AsyncStorage.setItem(CREDENTIAL_KEY, data.credential);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 // Claims a server-generated device credential using a purchase-path transaction_id.
 //
 // HOW IT WORKS
@@ -176,17 +203,23 @@ function useSubscriptionContext() {
         (result as any).transaction?.transactionIdentifier ?? null;
       return { customerInfo: result.customerInfo, transactionId };
     },
-    onSuccess: async ({ transactionId }) => {
+    onSuccess: async ({ customerInfo, transactionId }) => {
       customerInfoQuery.refetch();
 
-      // iOS returns a usable StoreKit transactionIdentifier — claim by it.
+      // PRIMARY: direct verification with RevenueCat (most reliable, no webhook race).
+      const appUserId = customerInfo?.originalAppUserId ?? null;
+      if (appUserId) {
+        const ok = await claimByUserId(appUserId);
+        if (ok) return;
+      }
+
+      // FALLBACK 1: purchase-path transaction id (iOS StoreKit).
       if (transactionId) {
         await claimByTransactionId(transactionId);
       }
 
-      // Fallback for Android (transactionIdentifier is null there) or any case where
-      // the purchase-path claim didn't land. claimByRestoreNonce is store-agnostic and
-      // is skipped automatically if a credential already exists, so it's safe on iOS.
+      // FALLBACK 2: nonce-based restore (covers any remaining case). Skipped if a
+      // credential already exists, so it's safe to always attempt.
       const stored = await AsyncStorage.getItem(CREDENTIAL_KEY);
       if (!stored) {
         await claimByRestoreNonce();
@@ -194,11 +227,20 @@ function useSubscriptionContext() {
     },
   });
 
-  // Restore flow: generate nonce → setAttributes → restorePurchases → claim by nonce.
-  // No rc_app_user_id is sent to the credential-issuance endpoint.
+  // Restore flow: try direct RevenueCat verification first (reliable), then fall back
+  // to the nonce-based restore (generate nonce → setAttributes → restorePurchases → claim).
   const restoreMutation = useMutation({
     mutationFn: async () => {
-      await claimByRestoreNonce();
+      // Make sure we have the latest customer info / app user id.
+      const info = await Purchases.getCustomerInfo();
+      const uid = info?.originalAppUserId ?? null;
+      let ok = false;
+      if (uid) {
+        ok = await claimByUserId(uid);
+      }
+      if (!ok) {
+        await claimByRestoreNonce();
+      }
       return Purchases.getCustomerInfo();
     },
     onSuccess: () => {
@@ -211,15 +253,18 @@ function useSubscriptionContext() {
 
   const appUserID = customerInfoQuery.data?.originalAppUserId ?? null;
 
-  // Auto-bootstrap for existing subscribers who do not yet have a stored credential
-  // (e.g. upgraded from an older app version before this credential system was added).
-  // Runs the full nonce-based restore flow silently in the background.
+  // Auto-bootstrap for subscribers who do not yet have a stored credential
+  // (new purchase whose claim didn't land, upgrade from an older app version, or a
+  // device that lost its credential). Tries direct RevenueCat verification first
+  // (reliable), then falls back to the nonce-based restore flow.
   useEffect(() => {
     if (!isSubscribed || !appUserID) return;
 
-    AsyncStorage.getItem(CREDENTIAL_KEY).then((stored) => {
-      if (!stored) {
-        claimByRestoreNonce();
+    AsyncStorage.getItem(CREDENTIAL_KEY).then(async (stored) => {
+      if (stored) return;
+      const ok = await claimByUserId(appUserID);
+      if (!ok) {
+        await claimByRestoreNonce();
       }
     });
   }, [isSubscribed, appUserID]);
