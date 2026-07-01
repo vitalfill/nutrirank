@@ -2,7 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import * as Linking from "expo-linking";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
@@ -477,15 +476,8 @@ export default function HomeScreen() {
                 {isSubscribed ? (
                   <Pressable
                     style={({ pressed }) => [styles.proBadge, pressed && { opacity: 0.7 }]}
-                    onPress={() => {
-                      // Open the platform's native Manage Subscriptions screen so the
-                      // user can change tier or cancel. iOS and Android use different URLs.
-                      const url = Platform.OS === "ios"
-                        ? "https://apps.apple.com/account/subscriptions"
-                        : "https://play.google.com/store/account/subscriptions";
-                      Linking.openURL(url).catch(() => {});
-                    }}
-                    accessibilityLabel="Manage your NutriRank Pro subscription"
+                    onPress={() => setShowPaywall(true)}
+                    accessibilityLabel="View your NutriRank Pro subscription"
                   >
                     <MaterialIcons name="verified" size={12} color={colors.gold} />
                     <Text style={styles.proBadgeText}>Pro</Text>
