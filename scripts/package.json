@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seedRevenueCat": "tsx ./src/seedRevenueCat.ts",
+    "fixPricing": "tsx ./src/fixPricing.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
