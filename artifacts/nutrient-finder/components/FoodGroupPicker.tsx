@@ -10,6 +10,7 @@ import {
 
 import { ALL_GROUP_CODES, ANIMAL_GROUP_CODES, PLANT_GROUP_CODES } from "@/constants/api";
 import { DIETARY_FILTERS } from "@/constants/dietaryFilters";
+import { getFoodGroupIcon } from "@/constants/foodGroupIcons";
 import { useColors } from "@/hooks/useColors";
 import { FoodGroup } from "@/types";
 
@@ -54,13 +55,17 @@ function shortGroupLabel(desc: string): string {
 export default function FoodGroupPicker({ groups, selectedIds, onChange, loading }: Props) {
   const colors = useColors();
   const styles = makeStyles(colors);
-  const [expanded, setExpanded] = useState(false);
+  const [dietExpanded,  setDietExpanded]  = useState(false);
+  const [groupExpanded, setGroupExpanded] = useState(false);
 
-  const activeSpecial = SPECIAL_OPTIONS.find(opt => isSetEqual(selectedIds, opt.codes)) ?? null;
-  const activeDietary = DIETARY_FILTERS.find(opt => isSetEqual(selectedIds, opt.groupCodes)) ?? null;
+  const activeSpecial  = SPECIAL_OPTIONS.find(opt => isSetEqual(selectedIds, opt.codes)) ?? null;
+  const activeDietary  = DIETARY_FILTERS.find(opt => isSetEqual(selectedIds, opt.groupCodes)) ?? null;
+  const hasSelection   = selectedIds.length > 0;
 
-  const granularSelectedCount = selectedIds.filter(id => ALL_GROUP_CODES.includes(id)).length;
-  const hasSelection = selectedIds.length > 0;
+  // Count of selected IDs that map to actual API food-group codes
+  const selectedGroupCount = selectedIds.filter(id =>
+    groups.some(g => g.FdGrp_Cd === id)
+  ).length;
 
   function handleSpecial(opt: typeof SPECIAL_OPTIONS[0]) {
     if (activeSpecial?.id === opt.id) onChange([]);
@@ -68,23 +73,38 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
   }
 
   function handleDietary(opt: (typeof DIETARY_FILTERS)[0]) {
-    if (activeDietary?.id === opt.id) onChange([]);
-    else onChange([...opt.groupCodes]);
-  }
-
-  function handleGroup(code: string) {
-    if (selectedIds.includes(code)) {
-      onChange(selectedIds.filter(id => id !== code));
+    if (activeDietary?.id === opt.id) {
+      onChange([]);
     } else {
-      onChange([...selectedIds, code]);
+      onChange([...opt.groupCodes]);
     }
   }
 
-  const showSelectedBadge = granularSelectedCount > 0 && !activeSpecial && !activeDietary;
+  function handleGroup(code: string) {
+    const next = selectedIds.includes(code)
+      ? selectedIds.filter(id => id !== code)
+      : [...selectedIds, code];
+    onChange(next);
+    // If this manual edit means the selection no longer matches any dietary
+    // preset, the activeDietary check will auto-clear on the parent re-render
+    // (no extra logic needed — isSetEqual handles it).
+  }
+
+  // Collapsible button labels
+  const dietLabel = activeDietary
+    ? `Filter by diet · ${activeDietary.emoji} ${activeDietary.label}`
+    : "Filter by diet";
+  const dietActive = activeDietary !== null;
+
+  const fgLabel = selectedGroupCount > 0
+    ? `Filter by food group · ${selectedGroupCount} selected`
+    : "Filter by food group";
+  const fgActive = selectedGroupCount > 0;
 
   return (
     <View style={styles.container}>
-      {/* Row 1 — Broad scope */}
+
+      {/* ── Row 1: Broad scope (always visible) ── */}
       <View style={styles.row}>
         {SPECIAL_OPTIONS.map(opt => {
           const isActive = activeSpecial?.id === opt.id;
@@ -117,54 +137,86 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
         )}
       </View>
 
-      {/* Row 2 — Diet presets */}
-      <View style={styles.row}>
-        {DIETARY_FILTERS.map(opt => {
-          const isActive = activeDietary?.id === opt.id;
-          return (
-            <Pressable
-              key={opt.id}
-              style={({ pressed }) => [
-                styles.dietaryChip,
-                isActive ? styles.dietaryChipActive : styles.dietaryChipInactive,
-                pressed && styles.chipPressed,
-              ]}
-              onPress={() => handleDietary(opt)}
-            >
-              <Text style={styles.dietaryEmoji}>{opt.emoji}</Text>
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{opt.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Row 3 — Expandable granular groups */}
+      {/* ── Filter by diet (collapsible) ── */}
       <View>
         <Pressable
-          style={({ pressed }) => [styles.expandBtn, pressed && { opacity: 0.75 }]}
-          onPress={() => setExpanded(e => !e)}
+          style={({ pressed }) => [
+            styles.collapseBtn,
+            dietActive && styles.collapseBtnActive,
+            pressed && { opacity: 0.75 },
+          ]}
+          onPress={() => setDietExpanded(e => !e)}
         >
+          <Text
+            style={[styles.collapseBtnText, dietActive && styles.collapseBtnTextActive]}
+            numberOfLines={1}
+          >
+            {dietLabel}
+          </Text>
           <MaterialIcons
-            name={expanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+            name={dietExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
             size={16}
-            color={colors.primary}
+            color={dietActive ? colors.primary : colors.mutedForeground}
           />
-          <Text style={styles.expandBtnText}>Filter by food group</Text>
-          {showSelectedBadge && (
-            <View style={styles.selectedCountBadge}>
-              <Text style={styles.selectedCountText}>{granularSelectedCount} selected</Text>
-            </View>
-          )}
         </Pressable>
 
-        {expanded && (
+        {dietExpanded && (
+          <View style={styles.expandedRow}>
+            {DIETARY_FILTERS.map(opt => {
+              const isActive = activeDietary?.id === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    isActive ? styles.chipActive : styles.chipInactive,
+                    pressed && styles.chipPressed,
+                  ]}
+                  onPress={() => handleDietary(opt)}
+                >
+                  <Text style={styles.chipEmoji}>{opt.emoji}</Text>
+                  <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      </View>
+
+      {/* ── Filter by food group (collapsible) ── */}
+      <View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.collapseBtn,
+            fgActive && styles.collapseBtnActive,
+            pressed && { opacity: 0.75 },
+          ]}
+          onPress={() => setGroupExpanded(e => !e)}
+        >
+          <Text
+            style={[styles.collapseBtnText, fgActive && styles.collapseBtnTextActive]}
+            numberOfLines={1}
+          >
+            {fgLabel}
+          </Text>
+          <MaterialIcons
+            name={groupExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+            size={16}
+            color={fgActive ? colors.primary : colors.mutedForeground}
+          />
+        </Pressable>
+
+        {groupExpanded && (
           <View style={styles.groupGrid}>
             {loading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               groups.map(g => {
                 const isActive = selectedIds.includes(g.FdGrp_Cd);
-                const label = shortGroupLabel(g.FdGrp_Desc);
+                const label    = shortGroupLabel(g.FdGrp_Desc);
+                const icon     = getFoodGroupIcon(g.FdGrp_Cd);
                 return (
                   <Pressable
                     key={g.FdGrp_Cd}
@@ -175,6 +227,7 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
                     ]}
                     onPress={() => handleGroup(g.FdGrp_Cd)}
                   >
+                    <Text style={styles.chipEmoji}>{icon}</Text>
                     <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
                       {label}
                     </Text>
@@ -185,13 +238,16 @@ export default function FoodGroupPicker({ groups, selectedIds, onChange, loading
           </View>
         )}
       </View>
+
     </View>
   );
 }
 
 function makeStyles(colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
-    container: { gap: 8 },
+    container: { gap: 7 },
+
+    /* ── Row 1 chips ── */
     row: {
       flexDirection: "row",
       flexWrap: "wrap",
@@ -207,27 +263,10 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       borderRadius: 20,
       borderWidth: 1.5,
     },
-    dietaryChip: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      paddingHorizontal: 11,
-      paddingVertical: 6,
-      borderRadius: 20,
-      borderWidth: 1.5,
-    },
-    dietaryChipActive: {
-      backgroundColor: colors.chipActive,
-      borderColor: colors.chipActiveBorder,
-    },
-    dietaryChipInactive: {
-      backgroundColor: colors.chipInactive,
-      borderColor: colors.chipInactiveBorder,
-    },
-    dietaryEmoji: { fontSize: 13 },
     chip: {
       flexDirection: "row",
       alignItems: "center",
+      gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 16,
@@ -251,6 +290,7 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       color: colors.primary,
       fontFamily: "Inter_600SemiBold",
     },
+    chipEmoji: { fontSize: 12 },
     clearBtn: {
       flexDirection: "row",
       alignItems: "center",
@@ -263,7 +303,9 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       color: colors.mutedForeground,
       fontFamily: "Inter_400Regular",
     },
-    expandBtn: {
+
+    /* ── Collapsible expand buttons ── */
+    collapseBtn: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
@@ -272,29 +314,37 @@ function makeStyles(colors: ReturnType<typeof useColors>) {
       borderRadius: 10,
       paddingHorizontal: 12,
       paddingVertical: 8,
+      backgroundColor: colors.chipInactive,
     },
-    expandBtnText: {
+    collapseBtnActive: {
+      borderColor: colors.chipActiveBorder,
+      backgroundColor: colors.chipActive,
+    },
+    collapseBtnText: {
       flex: 1,
       fontSize: 12,
-      color: colors.primary,
+      color: colors.mutedForeground,
       fontFamily: "Inter_500Medium",
     },
-    selectedCountBadge: {
-      backgroundColor: colors.secondary,
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-    },
-    selectedCountText: {
-      fontSize: 11,
+    collapseBtnTextActive: {
       color: colors.primary,
       fontFamily: "Inter_600SemiBold",
+    },
+
+    /* ── Expanded content areas ── */
+    expandedRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 7,
+      paddingTop: 8,
+      paddingHorizontal: 2,
     },
     groupGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
       gap: 7,
       paddingTop: 8,
+      paddingHorizontal: 2,
     },
   });
 }
