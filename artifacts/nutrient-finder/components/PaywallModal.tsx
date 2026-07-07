@@ -238,6 +238,9 @@ export default function PaywallModal({ visible, onDismiss }: Props) {
               ))}
             </View>
 
+            {/* Trust cue */}
+            <Text style={styles.trustLine}>No commitment. Cancel anytime.</Text>
+
             {/* Package cards */}
             {packages.length === 0 ? (
               <View style={styles.loadingRow}>
@@ -489,6 +492,11 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
     pkgPrice: { fontSize: 16, fontFamily: "Inter_700Bold", color: colors.foreground },
     pkgPriceSelected: { color: colors.primary },
     pkgPeriod: { fontSize: 11, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
+
+    trustLine: {
+      fontSize: 12, color: colors.mutedForeground,
+      fontFamily: "Inter_400Regular", textAlign: "center",
+    },
 
     loadingRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 8 },
     loadingText: { fontSize: 14, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
