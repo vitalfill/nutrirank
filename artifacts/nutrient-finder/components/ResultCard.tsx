@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { getFoodGroupIcon } from "@/constants/foodGroupIcons";
 import { useColors } from "@/hooks/useColors";
 import { FoodResult, FoodWeight } from "@/types";
 
@@ -63,6 +64,7 @@ export default function ResultCard({
   }
 
   const servingLabel = formatServingLabel(selectedWeight);
+  const groupIcon = getFoodGroupIcon(item.FdGrp_Cd);
 
   function handleFavorite() {
     Haptics.impactAsync(isFavorited ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
@@ -92,8 +94,11 @@ export default function ResultCard({
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
-        <View style={styles.rankBadge}>
-          <Text style={styles.rankText}>{rank}</Text>
+        <View style={styles.rankWrap}>
+          <Text style={styles.groupIconText}>{groupIcon}</Text>
+          <View style={styles.rankBadge}>
+            <Text style={styles.rankText}>{rank}</Text>
+          </View>
         </View>
 
         {/* Tappable food name → opens Food Detail */}
@@ -193,6 +198,10 @@ function makeStyles(colors: ReturnType<typeof useColors>, insets: ReturnType<typ
       shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
     },
     topRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+    rankWrap: {
+      flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 0,
+    },
+    groupIconText: { fontSize: 14, lineHeight: 16 },
     rankBadge: {
       width: 28, height: 28, borderRadius: 8,
       backgroundColor: colors.rankBadge,
