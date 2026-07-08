@@ -16,11 +16,14 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.vitalfill.nutrirank",
-      "buildNumber": "17"
+      "buildNumber": "17",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.vitalfill.nutrirank",
-      "versionCode": 2,
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#2D6A4F"
@@ -42,6 +45,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4db363e7-2164-4b39-a44c-b8d6fcea97d5"
+      }
     }
   }
 }
