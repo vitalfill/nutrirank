@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSubscription } from "@/lib/revenuecat";
 import { useColors } from "@/hooks/useColors";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 
 const PRIVACY_URL = "https://vital-fill.com/privacy.php";
 const APPLE_EULA  = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
@@ -212,6 +213,7 @@ export default function PaywallModal({ visible, onDismiss }: Props) {
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
+          <ResponsiveContainer>
             {/* Header */}
             <View style={styles.iconWrap}>
               <MaterialIcons name="eco" size={36} color="#FFFFFF" />
@@ -313,10 +315,11 @@ export default function PaywallModal({ visible, onDismiss }: Props) {
             )}
 
             {error.length > 0 && <Text style={styles.errorText}>{error}</Text>}
+          </ResponsiveContainer>
           </ScrollView>
 
           {/* Fixed bottom actions */}
-          <View style={styles.bottomActions}>
+          <ResponsiveContainer style={styles.bottomActions}>
             <Pressable
               style={({ pressed }) => [
                 styles.btn,
@@ -363,7 +366,7 @@ export default function PaywallModal({ visible, onDismiss }: Props) {
                 EULA
               </Text>
             </Text>
-          </View>
+          </ResponsiveContainer>
         </View>
       </Modal>
 
