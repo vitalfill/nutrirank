@@ -7,6 +7,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 import {
   UserProfile, Sex, AgeGroup, PregnancyStatus,
   AGE_GROUPS, pregnancyAllowed, getProfileLabel,
@@ -43,8 +44,10 @@ export default function ProfilePickerModal({ visible, current, onSelect, onClose
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View
+        <ResponsiveContainer
           style={[styles.sheet, { paddingBottom: Platform.OS === "web" ? 24 : insets.bottom + 8 }]}
+        >
+        <View
           onStartShouldSetResponder={() => true}
         >
           <View style={styles.handle} />
@@ -142,6 +145,7 @@ export default function ProfilePickerModal({ visible, current, onSelect, onClose
             <Text style={styles.applyLabel}>Apply</Text>
           </Pressable>
         </View>
+        </ResponsiveContainer>
       </Pressable>
     </Modal>
   );
