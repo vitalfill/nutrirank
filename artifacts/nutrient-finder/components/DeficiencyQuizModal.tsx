@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 import { QUIZ_QUESTIONS, NUTR_LABELS } from "@/constants/quizData";
 import { Nutrient } from "@/types";
 
@@ -104,6 +105,7 @@ export default function DeficiencyQuizModal({ visible, nutrients, onSelectNutrie
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.scroll, { paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 40 }]}
           >
+          <ResponsiveContainer>
             {/* Intro */}
             <View style={styles.introBanner}>
               <Text style={styles.introText}>
@@ -150,6 +152,7 @@ export default function DeficiencyQuizModal({ visible, nutrients, onSelectNutrie
               <MaterialIcons name="insights" size={18} color="#FFFFFF" />
               <Text style={styles.submitText}>See My Recommendations</Text>
             </Pressable>
+          </ResponsiveContainer>
           </ScrollView>
         )}
 
@@ -158,6 +161,7 @@ export default function DeficiencyQuizModal({ visible, nutrients, onSelectNutrie
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.scroll, { paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 40 }]}
           >
+          <ResponsiveContainer>
             <View style={styles.resultsBanner}>
               <MaterialIcons name="lightbulb" size={28} color={colors.gold} />
               <Text style={styles.resultsTitle}>Your Priority Nutrients</Text>
@@ -202,6 +206,7 @@ export default function DeficiencyQuizModal({ visible, nutrients, onSelectNutrie
             <Pressable style={styles.retakeBtn} onPress={handleReset}>
               <Text style={styles.retakeText}>Retake Quiz</Text>
             </Pressable>
+          </ResponsiveContainer>
           </ScrollView>
         )}
       </View>
