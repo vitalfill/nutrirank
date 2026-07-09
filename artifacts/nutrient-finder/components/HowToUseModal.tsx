@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const PRIVACY_URL = "https://vital-fill.com/privacy.php";
 
 import { useColors } from "@/hooks/useColors";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 import SourcesModal from "@/components/SourcesModal";
 
 interface Props {
@@ -86,6 +87,7 @@ export default function HowToUseModal({ visible, onClose }: Props) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.content, { paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 40 }]}
           >
+          <ResponsiveContainer>
             {/* Disclaimer */}
             <View style={styles.disclaimerCard}>
               <MaterialIcons name="info-outline" size={16} color={colors.accent} />
@@ -187,6 +189,7 @@ export default function HowToUseModal({ visible, onClose }: Props) {
               <Text style={styles.privacyText}>Privacy Policy</Text>
             </Pressable>
             <Text style={styles.copyright}>© Copyright Vital Fill LLC 2026</Text>
+          </ResponsiveContainer>
           </ScrollView>
         </View>
       </Modal>
