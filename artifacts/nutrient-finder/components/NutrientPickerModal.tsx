@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 import { Nutrient } from "@/types";
 
 interface Props {
@@ -124,6 +125,7 @@ export default function NutrientPickerModal({
                 const isLocked   = !isFree && !isSubscribed;
                 const isSelected = selected?.Nutr_No === item.Nutr_No;
                 return (
+                  <ResponsiveContainer>
                   <Pressable
                     style={({ pressed }) => [
                       styles.listItem,
@@ -152,6 +154,7 @@ export default function NutrientPickerModal({
                       <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
                     ) : null}
                   </Pressable>
+                  </ResponsiveContainer>
                 );
               }}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
