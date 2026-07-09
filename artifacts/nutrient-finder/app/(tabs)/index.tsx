@@ -28,6 +28,7 @@ import NutrientInfoBox from "@/components/NutrientInfoBox";
 import NutrientPickerModal from "@/components/NutrientPickerModal";
 import PaywallModal from "@/components/PaywallModal";
 import ProfilePickerModal from "@/components/ProfilePickerModal";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 import ResultCard from "@/components/ResultCard";
 import SearchHistory from "@/components/SearchHistory";
 import { useColors } from "@/hooks/useColors";
@@ -291,62 +292,68 @@ export default function HomeScreen() {
 
   // ── render helpers ─────────────────────────────────────────────────────────
   const renderResult = useCallback(({ item, index }: { item: FoodResult; index: number }) => (
-    <ResultCard
-      item={item}
-      rank={(page - 1) * 10 + index + 1}
-      nutrientLabel={searchData?.nutrient.NutrDesc ?? ""}
-      units={searchData?.nutrient.Units ?? ""}
-      nutrNo={debouncedNutrient?.Nutr_No ?? ""}
-      dailyValue={dailyValue ?? undefined}
-      isFavorited={isFavorited(item.NDB_No)}
-      onToggleFavorite={() => toggleFavorite(item)}
-      onPressFood={(ndbNo, name) => { setDetailNdbNo(ndbNo); setDetailFoodName(name); }}
-    />
+    <ResponsiveContainer>
+      <ResultCard
+        item={item}
+        rank={(page - 1) * 10 + index + 1}
+        nutrientLabel={searchData?.nutrient.NutrDesc ?? ""}
+        units={searchData?.nutrient.Units ?? ""}
+        nutrNo={debouncedNutrient?.Nutr_No ?? ""}
+        dailyValue={dailyValue ?? undefined}
+        isFavorited={isFavorited(item.NDB_No)}
+        onToggleFavorite={() => toggleFavorite(item)}
+        onPressFood={(ndbNo, name) => { setDetailNdbNo(ndbNo); setDetailFoodName(name); }}
+      />
+    </ResponsiveContainer>
   ), [page, searchData, debouncedNutrient, dailyValue, favorites, userProfile]);
 
   const ListHeader = useCallback(() => (
     searchData ? (
-      <View style={styles.resultsHeader}>
-        <Text style={styles.resultsCount}>
-          {searchData.total.toLocaleString()} foods · Page {page}/{searchData.total_pages}
-        </Text>
-        <Pressable
-          style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.7 }]}
-          onPress={handleShare}
-        >
-          <MaterialIcons name="share" size={15} color={colors.primary} />
-          <Text style={styles.shareBtnText}>Share Top 10</Text>
-        </Pressable>
-      </View>
+      <ResponsiveContainer>
+        <View style={styles.resultsHeader}>
+          <Text style={styles.resultsCount}>
+            {searchData.total.toLocaleString()} foods · Page {page}/{searchData.total_pages}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.7 }]}
+            onPress={handleShare}
+          >
+            <MaterialIcons name="share" size={15} color={colors.primary} />
+            <Text style={styles.shareBtnText}>Share Top 10</Text>
+          </Pressable>
+        </View>
+      </ResponsiveContainer>
     ) : null
   ), [searchData, page, styles, colors]);
 
   const ListFooter = useCallback(() => {
     if (!searchData || searchData.total_pages <= 1) return null;
     return (
-      <View style={styles.pagination}>
-        <Pressable
-          style={({ pressed }) => [styles.pageBtn, page === 1 && styles.pageBtnDisabled, pressed && { opacity: 0.7 }]}
-          onPress={() => handlePageChange(page - 1)}
-          disabled={page === 1}
-        >
-          <MaterialIcons name="chevron-left" size={20} color={page === 1 ? colors.mutedForeground : colors.primary} />
-          <Text style={[styles.pageBtnText, page === 1 && styles.pageBtnTextDisabled]}>Prev</Text>
-        </Pressable>
-        <View style={styles.pageIndicator}>
-          <Text style={styles.pageText}>{page}</Text>
-          <Text style={styles.pageSep}>/</Text>
-          <Text style={styles.pageTotalText}>{searchData.total_pages}</Text>
+      <ResponsiveContainer>
+        <View style={styles.pagination}>
+          <Pressable
+            style={({ pressed }) => [styles.pageBtn, page === 1 && styles.pageBtnDisabled, pressed && { opacity: 0.7 }]}
+            onPress={() => handlePageChange(page - 1)}
+            disabled={page === 1}
+          >
+            <MaterialIcons name="chevron-left" size={20} color={page === 1 ? colors.mutedForeground : colors.primary} />
+            <Text style={[styles.pageBtnText, page === 1 && styles.pageBtnTextDisabled]}>Prev</Text>
+          </Pressable>
+          <View style={styles.pageIndicator}>
+            <Text style={styles.pageText}>{page}</Text>
+            <Text style={styles.pageSep}>/</Text>
+            <Text style={styles.pageTotalText}>{searchData.total_pages}</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.pageBtn, page === searchData.total_pages && styles.pageBtnDisabled, pressed && { opacity: 0.7 }]}
+            onPress={() => handlePageChange(page + 1)}
+            disabled={page === searchData.total_pages}
+          >
+            <Text style={[styles.pageBtnText, page === searchData.total_pages && styles.pageBtnTextDisabled]}>Next</Text>
+            <MaterialIcons name="chevron-right" size={20} color={page === searchData.total_pages ? colors.mutedForeground : colors.primary} />
+          </Pressable>
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.pageBtn, page === searchData.total_pages && styles.pageBtnDisabled, pressed && { opacity: 0.7 }]}
-          onPress={() => handlePageChange(page + 1)}
-          disabled={page === searchData.total_pages}
-        >
-          <Text style={[styles.pageBtnText, page === searchData.total_pages && styles.pageBtnTextDisabled]}>Next</Text>
-          <MaterialIcons name="chevron-right" size={20} color={page === searchData.total_pages ? colors.mutedForeground : colors.primary} />
-        </Pressable>
-      </View>
+      </ResponsiveContainer>
     );
   }, [searchData, page, colors, styles]);
 
@@ -495,55 +502,57 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Nutrient picker */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>NUTRIENT</Text>
-              <NutrientPickerModal
-                nutrients={nutrients}
-                selected={selectedNutrient}
-                onSelect={handleSelectNutrient}
-                loading={nutrientsLoading}
-                error={nutrientsError}
-                isSubscribed={isSubscribed}
-                freeNutrientNos={FREE_NUTRIENT_NOS}
-                onPaywallRequest={() => setShowPaywall(true)}
-              />
-              {searchHistory.length > 0 && (
-                <SearchHistory
-                  history={searchHistory}
+            <ResponsiveContainer>
+              {/* Nutrient picker */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>NUTRIENT</Text>
+                <NutrientPickerModal
+                  nutrients={nutrients}
+                  selected={selectedNutrient}
                   onSelect={handleSelectNutrient}
-                  onClear={clearHistory}
+                  loading={nutrientsLoading}
+                  error={nutrientsError}
+                  isSubscribed={isSubscribed}
+                  freeNutrientNos={FREE_NUTRIENT_NOS}
+                  onPaywallRequest={() => setShowPaywall(true)}
                 />
-              )}
-            </View>
+                {searchHistory.length > 0 && (
+                  <SearchHistory
+                    history={searchHistory}
+                    onSelect={handleSelectNutrient}
+                    onClear={clearHistory}
+                  />
+                )}
+              </View>
 
-            {/* Nutrient info box */}
-            {selectedNutrient && (
-              <View style={styles.sectionNoLabel}>
-                <NutrientInfoBox
-                  nutrient={selectedNutrient}
-                  profile={userProfile}
-                  collapsed={infoBoxCollapsed}
-                  onToggleCollapsed={() => setInfoBoxCollapsed(c => !c)}
+              {/* Nutrient info box */}
+              {selectedNutrient && (
+                <View style={styles.sectionNoLabel}>
+                  <NutrientInfoBox
+                    nutrient={selectedNutrient}
+                    profile={userProfile}
+                    collapsed={infoBoxCollapsed}
+                    onToggleCollapsed={() => setInfoBoxCollapsed(c => !c)}
+                  />
+                </View>
+              )}
+
+              {/* Food groups */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>FOOD GROUPS</Text>
+                <FoodGroupPicker
+                  groups={foodGroups}
+                  selectedIds={selectedGroupIds}
+                  onChange={ids => setSelectedGroupIds(ids)}
+                  loading={groupsLoading}
                 />
               </View>
-            )}
-
-            {/* Food groups */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>FOOD GROUPS</Text>
-              <FoodGroupPicker
-                groups={foodGroups}
-                selectedIds={selectedGroupIds}
-                onChange={ids => setSelectedGroupIds(ids)}
-                loading={groupsLoading}
-              />
-            </View>
+            </ResponsiveContainer>
 
             {canSearch && <ListHeader />}
           </View>
         }
-        ListEmptyComponent={<EmptyOrPrompt />}
+        ListEmptyComponent={<ResponsiveContainer><EmptyOrPrompt /></ResponsiveContainer>}
         ListFooterComponent={<ListFooter />}
         showsVerticalScrollIndicator={false}
         refreshControl={
