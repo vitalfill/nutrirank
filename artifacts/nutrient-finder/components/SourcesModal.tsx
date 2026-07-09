@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 
 interface Props {
   visible: boolean;
@@ -77,6 +78,7 @@ export default function SourcesModal({ visible, onClose }: Props) {
             { paddingBottom: Platform.OS === "web" ? 40 : insets.bottom + 40 },
           ]}
         >
+        <ResponsiveContainer>
           {/* Disclaimer */}
           <View style={styles.disclaimerCard}>
             <MaterialIcons name="info-outline" size={18} color={colors.accent} />
@@ -110,6 +112,7 @@ export default function SourcesModal({ visible, onClose }: Props) {
             Intakes (DRIs). Nutrient health information is sourced from the NIH Office of Dietary
             Supplements fact sheets and MedlinePlus.
           </Text>
+        </ResponsiveContainer>
         </ScrollView>
       </View>
     </Modal>
