@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import ResponsiveContainer from "@/components/ResponsiveContainer";
 import { Favorite } from "@/types";
 
 interface Props {
@@ -61,6 +62,7 @@ export default function FavoritesModal({ visible, favorites, onRevisit, onDelete
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
+              <ResponsiveContainer>
               <View style={styles.card}>
                 <View style={styles.cardTop}>
                   <View style={styles.nutrientBadge}>
@@ -104,6 +106,7 @@ export default function FavoritesModal({ visible, favorites, onRevisit, onDelete
                   Saved {new Date(item.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                 </Text>
               </View>
+              </ResponsiveContainer>
             )}
             ItemSeparatorComponent={() => <View style={{ height: 1 }} />}
           />
