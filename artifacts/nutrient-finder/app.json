@@ -14,7 +14,7 @@
       "backgroundColor": "#2D6A4F"
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.vitalfill.nutrirank",
       "buildNumber": "17",
       "infoPlist": {
